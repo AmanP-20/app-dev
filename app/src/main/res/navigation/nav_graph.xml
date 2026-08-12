@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/splashFragment">
+
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.amanp20.securevault.ui.splash.SplashFragment"
+        android:label="@string/splash_title"
+        tools:layout="@layout/fragment_splash">
+        <action
+            android:id="@+id/action_splashFragment_to_createPinFragment"
+            app:destination="@id/createPinFragment" />
+        <action
+            android:id="@+id/action_splashFragment_to_lockFragment"
+            app:destination="@id/lockFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/createPinFragment"
+        android:name="com.amanp20.securevault.ui.auth.CreatePinFragment"
+        android:label="@string/create_pin_title"
+        tools:layout="@layout/fragment_create_pin">
+        <action
+            android:id="@+id/action_createPinFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/splashFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/lockFragment"
+        android:name="com.amanp20.securevault.ui.auth.LockFragment"
+        android:label="@string/lock_title"
+        tools:layout="@layout/fragment_lock">
+        <action
+            android:id="@+id/action_lockFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/splashFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_lockFragment_to_createPinFragment"
+            app:destination="@id/createPinFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.amanp20.securevault.ui.home.HomeFragment"
+        android:label="@string/home_title"
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_homeFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.amanp20.securevault.ui.settings.SettingsFragment"
+        android:label="@string/settings_title"
+        tools:layout="@layout/fragment_settings">
+        <action
+            android:id="@+id/action_settingsFragment_to_changePinFragment"
+            app:destination="@id/changePinFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/changePinFragment"
+        android:name="com.amanp20.securevault.ui.auth.ChangePinFragment"
+        android:label="@string/change_pin_title"
+        tools:layout="@layout/fragment_change_pin" />
+</navigation>
