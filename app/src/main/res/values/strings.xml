@@ -13,6 +13,43 @@
     <string name="about_title">About</string>
     <string name="home_subtitle">Secure your documents, notes, and media.</string>
     <string name="about_body">SecureVault is built for private storage and protected access.</string>
+    <string name="add_file_action">Add file</string>
+    <string name="search_action">Search</string>
+    <string name="search_documents_hint">Search documents</string>
+    <string name="sort_documents">Sort documents</string>
+    <string name="filter_documents">Filter documents</string>
+    <string name="empty_vault_title">Your Vault is Empty</string>
+    <string name="empty_vault_message">Add documents to securely manage them in SecureVault.</string>
+    <string name="no_app_to_open_file">No application found to open this file.</string>
+    <string name="delete_document_message">Delete this document?</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="delete_action">Delete</string>
+    <string name="locked_document">Locked document</string>
+    <string name="open_action">Open</string>
+    <string name="lock_action">Lock</string>
+    <string name="change_lock_action">Change lock</string>
+    <string name="protect_document">Protect document</string>
+    <string name="password_lock">Password or PIN</string>
+    <string name="biometric_lock">Biometric</string>
+    <string name="combined_lock">Password/PIN + biometric</string>
+    <string name="document_password_title">Set document password</string>
+    <string name="document_password_hint">Password or PIN</string>
+    <string name="confirm_document_password_hint">Confirm password or PIN</string>
+    <string name="document_password_too_short">Use at least 4 characters.</string>
+    <string name="enter_document_password">Enter document password</string>
+    <string name="unlock_document">Unlock document</string>
+    <string name="biometric_document_subtitle">Authenticate to open this document.</string>
+    <string name="biometric_unavailable">Biometric authentication is unavailable.</string>
+    <string name="document_details">%1$s • %2$s</string>
+    <string name="document_added">Added %1$s</string>
+    <string-array name="document_sort_options">
+        <item>Name: A → Z</item><item>Name: Z → A</item><item>Newest first</item>
+        <item>Oldest first</item><item>Largest first</item><item>Smallest first</item>
+    </string-array>
+    <string-array name="document_categories">
+        <item>All</item><item>PDF</item><item>Document</item><item>Image</item>
+        <item>Video</item><item>Audio</item><item>Other</item>
+    </string-array>
     <string name="pin_hint">Enter PIN</string>
     <string name="confirm_pin_hint">Confirm PIN</string>
     <string name="current_pin_hint">Current PIN</string>

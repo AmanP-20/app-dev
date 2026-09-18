@@ -15,6 +15,7 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(LockViewModel::class.java) -> LockViewModel(repository)
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> HomeViewModel(repository)
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(repository)
+            modelClass.isAssignableFrom(SecureDocumentViewModel::class.java) -> SecureDocumentViewModel(repository)
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         } as T
     }

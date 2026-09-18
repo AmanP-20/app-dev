@@ -38,5 +38,8 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
         binding.settingsCard.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
         }
+        binding.documentsCard.setOnClickListener {
+            findNavController().navigate(R.id.action_homeFragment_to_documentsFragment)
+        }
     }
 }

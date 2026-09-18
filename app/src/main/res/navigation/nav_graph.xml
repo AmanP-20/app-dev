@@ -53,7 +53,16 @@
         <action
             android:id="@+id/action_homeFragment_to_settingsFragment"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_documentsFragment"
+            app:destination="@id/documentsFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/documentsFragment"
+        android:name="com.amanp20.securevault.ui.documents.DocumentsFragment"
+        android:label="@string/documents_title"
+        tools:layout="@layout/fragment_documents" />
 
     <fragment
         android:id="@+id/settingsFragment"

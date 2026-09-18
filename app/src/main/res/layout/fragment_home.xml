@@ -31,6 +31,7 @@
             android:rowCount="2">
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/documentsCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
