@@ -1,22 +1,27 @@
 package com.amanp20.securevault.ui.documents
 
+import android.content.DialogInterface
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.Menu
+import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.text.InputType
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.SearchView
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
-import androidx.appcompat.widget.SearchView
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -31,7 +36,7 @@ import com.amanp20.securevault.viewmodel.SecureDocumentViewModel
 import com.amanp20.securevault.viewmodel.ViewModelFactory
 
 class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
-    private val viewModel: SecureDocumentViewModel by viewModels {
+    private val viewModel: SecureDocumentViewModel by viewModels<SecureDocumentViewModel> {
         ViewModelFactory((requireActivity().application as SecureVaultApplication).appContainer.secureVaultRepository)
     }
     private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -45,7 +50,27 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        setHasOptionsMenu(true)
+        requireActivity().addMenuProvider(
+            object : MenuProvider {
+                override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                    menuInflater.inflate(R.menu.documents_menu, menu)
+                    val searchItem = menu.findItem(R.id.action_search)
+                    val searchView = searchItem.actionView as? SearchView ?: return
+                    searchView.queryHint = getString(R.string.search_documents_hint)
+                    searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                        override fun onQueryTextSubmit(query: String?) = true
+
+                        override fun onQueryTextChange(newText: String?) =
+                            viewModel.setQuery(newText.orEmpty()).let { true }
+                    })
+                }
+
+                override fun onMenuItemSelected(item: MenuItem): Boolean =
+                    handleMenuItemSelected(item)
+            },
+            viewLifecycleOwner,
+            Lifecycle.State.RESUMED
+        )
         adapter = DocumentAdapter(::openDocument, ::showDocumentMenu)
         binding.documentsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.documentsRecyclerView.adapter = adapter
@@ -67,22 +92,11 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, inflater: LayoutInflater) {
-        inflater.inflate(R.menu.documents_menu, menu)
-        val search = menu.findItem(R.id.action_search).actionView as SearchView
-        search.queryHint = getString(R.string.search_documents_hint)
-        search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?) = true
-            override fun onQueryTextChange(newText: String?) = viewModel.setQuery(newText.orEmpty()).let { true }
-        })
-        super.onCreateOptionsMenu(menu, inflater)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+    private fun handleMenuItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         R.id.action_sort -> {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.sort_documents)
-                .setItems(R.array.document_sort_options) { _, which ->
+                .setItems(R.array.document_sort_options) { _: DialogInterface, which: Int ->
                     viewModel.setSort(DocumentSort.values()[which])
                 }.show()
             true
@@ -90,13 +104,15 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
         R.id.action_filter -> {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.filter_documents)
-                .setSingleChoiceItems(resources.getStringArray(R.array.document_categories), 0) { dialog, which ->
+                .setSingleChoiceItems(resources.getStringArray(R.array.document_categories), 0) {
+                    dialog: DialogInterface,
+                    which: Int ->
                     viewModel.setCategory(resources.getStringArray(R.array.document_categories)[which])
                     dialog.dismiss()
                 }.show()
             true
         }
-        else -> super.onOptionsItemSelected(item)
+        else -> false
     }
 
     private fun openDocument(document: SecureDocument) {
@@ -108,12 +124,14 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     }
 
     private fun openUri(uri: Uri, mimeType: String) {
-        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-            type = mimeType
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        intent.type = mimeType
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            Snackbar.make(binding.root, R.string.no_app_to_open_file, Snackbar.LENGTH_LONG).show()
         }
-        runCatching { startActivity(intent) }
-            .onFailure { Snackbar.make(binding.root, R.string.no_app_to_open_file, Snackbar.LENGTH_LONG).show() }
     }
 
     private fun showDocumentMenu(document: SecureDocument) {
@@ -123,7 +141,7 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
             arrayOf(getString(R.string.open_action), getString(R.string.lock_action), getString(R.string.delete_action))
         }
         MaterialAlertDialogBuilder(requireContext())
-            .setItems(options) { _, which ->
+            .setItems(options) { _: DialogInterface, which: Int ->
                 when {
                     !document.isLocked && which == 0 -> openDocument(document)
                     !document.isLocked && which == 1 -> configureLock(document)
@@ -140,7 +158,9 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
         val choices = arrayOf(getString(R.string.password_lock), getString(R.string.biometric_lock), getString(R.string.combined_lock))
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.protect_document)
-            .setSingleChoiceItems(choices, 0) { dialog, which ->
+            .setSingleChoiceItems(choices, 0) {
+                dialog: DialogInterface,
+                which: Int ->
                 val type = arrayOf("PASSWORD", "BIOMETRIC", "PIN_AND_BIOMETRIC")[which]
                 if (type == "BIOMETRIC" && !biometricsAvailable()) {
                     Snackbar.make(binding.root, R.string.biometric_unavailable, Snackbar.LENGTH_LONG).show()
@@ -163,25 +183,19 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     }
 
     private fun passwordDialog(document: SecureDocument, type: String) {
-        val input = EditText(requireContext()).apply {
-            hint = getString(R.string.document_password_hint)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        val confirmation = EditText(requireContext()).apply {
-            hint = getString(R.string.confirm_document_password_hint)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        val fields = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 0, 48, 0)
-            addView(input)
-            addView(confirmation)
-        }
+        val input = passwordInput(R.string.document_password_hint)
+        val confirmation = passwordInput(R.string.confirm_document_password_hint)
+        val fields = LinearLayout(requireContext())
+        fields.orientation = LinearLayout.VERTICAL
+        fields.addView(input)
+        fields.addView(confirmation)
+        fields.setPadding(48, 0, 48, 0)
+        val fieldsView: View = fields
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.document_password_title)
-            .setView(fields)
+            .setView(fieldsView)
             .setNegativeButton(R.string.cancel_action, null)
-            .setPositiveButton(R.string.save_action) { _, _ ->
+            .setPositiveButton(R.string.save_action) { _: DialogInterface, _: Int ->
                 if (input.text.length < 4) {
                     Snackbar.make(binding.root, R.string.document_password_too_short, Snackbar.LENGTH_LONG).show()
                 } else if (input.text.toString() != confirmation.text.toString()) {
@@ -193,19 +207,17 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     }
 
     private fun authenticateLockedDocument(document: SecureDocument) {
-        if (document.lockType.contains("BIOMETRIC")) showBiometric(document) else passwordUnlock(document)
+        if (requiresBiometric(document.lockType)) showBiometric(document) else passwordUnlock(document)
     }
 
     private fun passwordUnlock(document: SecureDocument) {
-        val input = EditText(requireContext()).apply {
-            hint = getString(R.string.document_password_hint)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
+        val input = passwordInput(R.string.document_password_hint)
+        val inputView: View = input
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.enter_document_password)
-            .setView(input)
+            .setView(inputView)
             .setNegativeButton(R.string.cancel_action, null)
-            .setPositiveButton(R.string.unlock_action) { _, _ ->
+            .setPositiveButton(R.string.unlock_action) { _: DialogInterface, _: Int ->
                 viewModel.unlock(document, input.text.toString()) { uri -> openUri(uri, document.mimeType) }
             }.show()
     }
@@ -234,7 +246,7 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     }
 
     private fun authenticateLockedDocumentForChange(document: SecureDocument, onAuthenticated: () -> Unit) {
-        if (document.lockType.contains("BIOMETRIC")) {
+        if (requiresBiometric(document.lockType)) {
             val executor = ContextCompat.getMainExecutor(requireContext())
             BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -246,9 +258,10 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     }
 
     private fun passwordDialogForAction(document: SecureDocument, onAuthenticated: () -> Unit) {
-        val input = EditText(requireContext()).apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
-        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.enter_document_password).setView(input)
-            .setNegativeButton(R.string.cancel_action, null).setPositiveButton(R.string.unlock_action) { _, _ ->
+        val input = passwordInput(null)
+        val inputView: View = input
+        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.enter_document_password).setView(inputView)
+            .setNegativeButton(R.string.cancel_action, null).setPositiveButton(R.string.unlock_action) { _: DialogInterface, _: Int ->
                 viewModel.unlock(document, input.text.toString()) { onAuthenticated() }
             }.show()
     }
@@ -257,11 +270,24 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
         BiometricManager.from(requireContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
             BiometricManager.BIOMETRIC_SUCCESS
 
+    private fun passwordInput(hintResId: Int?): EditText {
+        val input = EditText(requireContext())
+        if (hintResId != null) {
+            input.hint = getString(hintResId)
+        }
+        input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        return input
+    }
+
+    private fun requiresBiometric(lockType: String): Boolean {
+        return lockType == "BIOMETRIC" || lockType == "PIN_AND_BIOMETRIC"
+    }
+
     private fun confirmDelete(document: SecureDocument) {
         MaterialAlertDialogBuilder(requireContext())
             .setMessage(R.string.delete_document_message)
             .setNegativeButton(R.string.cancel_action, null)
-            .setPositiveButton(R.string.delete_action) { _, _ -> viewModel.delete(document) }
+            .setPositiveButton(R.string.delete_action) { _: DialogInterface, _: Int -> viewModel.delete(document) }
             .show()
     }
 }
