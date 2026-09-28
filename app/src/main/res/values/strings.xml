@@ -13,6 +13,10 @@
     <string name="about_title">About</string>
     <string name="home_subtitle">Secure your documents, notes, and media.</string>
     <string name="about_body">SecureVault is built for private storage and protected access.</string>
+    <string name="greeting_morning">Good Morning</string>
+    <string name="greeting_afternoon">Good Afternoon</string>
+    <string name="greeting_evening">Good Evening</string>
+    <string name="greeting_night">Good Night</string>
     <string name="add_file_action">Add file</string>
     <string name="search_action">Search</string>
     <string name="search_documents_hint">Search documents</string>
@@ -21,6 +25,8 @@
     <string name="empty_vault_title">Your Vault is Empty</string>
     <string name="empty_vault_message">Add documents to securely manage them in SecureVault.</string>
     <string name="no_app_to_open_file">No application found to open this file.</string>
+    <string name="file_access_revoked">This file is no longer accessible. Import it again to restore access.</string>
+    <string name="no_documents_found">No documents found.</string>
     <string name="delete_document_message">Delete this document?</string>
     <string name="cancel_action">Cancel</string>
     <string name="delete_action">Delete</string>

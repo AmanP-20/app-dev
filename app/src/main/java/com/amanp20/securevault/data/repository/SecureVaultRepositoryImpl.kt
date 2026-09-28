@@ -80,8 +80,8 @@ class SecureVaultRepositoryImpl(context: Context) : SecureVaultRepository {
         }
 
     override suspend fun deleteDocument(document: SecureDocument) = withContext(Dispatchers.IO) {
-        securityManager.removeProtection(document.encryptedFilePath)
         requireDao().deleteById(document.id)
+        securityManager.removeProtection(document.encryptedFilePath)
     }
 
     override suspend fun lockDocument(document: SecureDocument, lockType: String, password: String?): SecureDocument =
@@ -142,7 +142,6 @@ class SecureVaultRepositoryImpl(context: Context) : SecureVaultRepository {
 
     override suspend fun removeDocumentProtection(document: SecureDocument): SecureDocument =
         withContext(Dispatchers.IO) {
-            securityManager.removeProtection(document.encryptedFilePath)
             val unprotected = document.copy(
                 isLocked = false,
                 encryptedFilePath = null,
@@ -155,6 +154,7 @@ class SecureVaultRepositoryImpl(context: Context) : SecureVaultRepository {
                 blockedUntil = null
             )
             requireDao().update(unprotected)
+            securityManager.removeProtection(document.encryptedFilePath)
             unprotected
         }
 
@@ -164,9 +164,13 @@ class SecureVaultRepositoryImpl(context: Context) : SecureVaultRepository {
 
     private fun hashPassword(password: String, salt: ByteArray): String {
         val spec = PBEKeySpec(password.toCharArray(), salt, 120_000, 256)
-        return Base64.encodeToString(
-            SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded,
-            Base64.NO_WRAP
-        )
+        return try {
+            Base64.encodeToString(
+                SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded,
+                Base64.NO_WRAP
+            )
+        } finally {
+            spec.clearPassword()
+        }
     }
 }

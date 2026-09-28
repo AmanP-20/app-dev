@@ -87,6 +87,9 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
             binding.emptyState.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
             binding.documentsRecyclerView.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
         }
+        viewModel.emptyStateMessage.observe(viewLifecycleOwner) { messageRes ->
+            binding.emptyStateMessage.setText(messageRes)
+        }
         viewModel.message.observe(viewLifecycleOwner) { message ->
             if (!message.isNullOrBlank()) Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
         }
@@ -131,6 +134,8 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
             startActivity(intent)
         } catch (_: ActivityNotFoundException) {
             Snackbar.make(binding.root, R.string.no_app_to_open_file, Snackbar.LENGTH_LONG).show()
+        } catch (_: SecurityException) {
+            Snackbar.make(binding.root, R.string.file_access_revoked, Snackbar.LENGTH_LONG).show()
         }
     }
 

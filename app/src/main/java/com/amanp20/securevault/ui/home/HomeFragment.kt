@@ -28,7 +28,7 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.greetingText.text = viewModel.greeting
+        binding.greetingText.setText(viewModel.greeting)
         viewModel.documentCount.observe(viewLifecycleOwner) { count ->
             binding.documentsCountText.text = count.toString()
         }

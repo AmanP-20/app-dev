@@ -7,6 +7,7 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.amanp20.securevault.R
 import com.amanp20.securevault.data.model.SecureDocument
 import com.amanp20.securevault.data.repository.AddDocumentResult
 import com.amanp20.securevault.data.repository.SecureVaultRepository
@@ -21,9 +22,11 @@ class SecureDocumentViewModel(private val repository: SecureVaultRepository) : V
     private val sort = MutableLiveData(DocumentSort.NEWEST)
     private val _documents = MediatorLiveData<List<SecureDocument>>()
     private val _message = MutableLiveData<String>()
+    private val _emptyStateMessage = MutableLiveData(R.string.empty_vault_message)
 
     val documents: LiveData<List<SecureDocument>> = _documents
     val message: LiveData<String> = _message
+    val emptyStateMessage: LiveData<Int> = _emptyStateMessage
 
     init {
         listOf(repository.documents, query, category, sort).forEach { source ->
@@ -88,7 +91,7 @@ class SecureDocumentViewModel(private val repository: SecureVaultRepository) : V
     private fun refresh() {
         val search = query.value.orEmpty().trim()
         val selectedCategory = category.value ?: "All"
-        _documents.value = repository.documents.value.orEmpty()
+        val filtered = repository.documents.value.orEmpty()
             .filter { search.isEmpty() || it.name.contains(search, ignoreCase = true) }
             .filter { selectedCategory == "All" || it.category == selectedCategory }
             .let { items ->
@@ -100,6 +103,13 @@ class SecureDocumentViewModel(private val repository: SecureVaultRepository) : V
                     DocumentSort.SMALLEST -> items.sortedBy { it.fileSize }
                     else -> items.sortedByDescending { it.dateAdded }
                 }
+            }
+        _documents.value = filtered
+        _emptyStateMessage.value =
+            if (search.isEmpty() && selectedCategory == "All") {
+                R.string.empty_vault_message
+            } else {
+                R.string.no_documents_found
             }
     }
 }

@@ -49,16 +49,22 @@ class DocumentSecurityManager(context: Context) {
     fun decryptDocument(documentId: Long, encryptedPath: String, encodedIv: String): Uri {
         val source = File(encryptedPath)
         require(source.isFile) { "Protected document is missing" }
+        cleanupExpiredPreviews()
         val output = File(cacheDir, "$documentId-${System.currentTimeMillis()}.bin")
-        val cipher = cipher(
-            Cipher.DECRYPT_MODE,
-            key(),
-            Base64.decode(encodedIv, Base64.NO_WRAP)
-        )
-        source.inputStream().use { input ->
-            CipherInputStream(input, cipher).use { encrypted ->
-                output.outputStream().use { decrypted -> encrypted.copyTo(decrypted) }
+        try {
+            val cipher = cipher(
+                Cipher.DECRYPT_MODE,
+                key(),
+                Base64.decode(encodedIv, Base64.NO_WRAP)
+            )
+            source.inputStream().use { input ->
+                CipherInputStream(input, cipher).use { encrypted ->
+                    output.outputStream().use { decrypted -> encrypted.copyTo(decrypted) }
+                }
             }
+        } catch (error: Throwable) {
+            output.delete()
+            throw error
         }
         return FileProvider.getUriForFile(
             appContext,
@@ -69,6 +75,13 @@ class DocumentSecurityManager(context: Context) {
 
     fun removeProtection(encryptedPath: String?) {
         encryptedPath?.let { File(it).delete() }
+    }
+
+    private fun cleanupExpiredPreviews() {
+        val expiry = System.currentTimeMillis() - PREVIEW_RETENTION_MILLIS
+        cacheDir.listFiles()
+            ?.filter { it.isFile && it.lastModified() < expiry }
+            ?.forEach { it.delete() }
     }
 
     private fun key(): SecretKey {
@@ -102,5 +115,6 @@ class DocumentSecurityManager(context: Context) {
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val GCM_TAG_LENGTH = 128
         const val GCM_IV_LENGTH = 12
+        const val PREVIEW_RETENTION_MILLIS = 10 * 60 * 1000L
     }
 }

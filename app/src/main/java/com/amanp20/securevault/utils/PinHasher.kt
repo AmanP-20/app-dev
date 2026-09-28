@@ -1,7 +1,7 @@
 package com.amanp20.securevault.utils
 
 import android.util.Base64
-import java.nio.ByteBuffer
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
@@ -21,12 +21,18 @@ object PinHasher {
     fun hashPin(pin: String, saltBase64: String): String {
         val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
         val spec = PBEKeySpec(pin.toCharArray(), salt, ITERATION_COUNT, KEY_LENGTH)
-        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val hash = factory.generateSecret(spec).encoded
-        return Base64.encodeToString(hash, Base64.NO_WRAP)
+        return try {
+            val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            Base64.encodeToString(factory.generateSecret(spec).encoded, Base64.NO_WRAP)
+        } finally {
+            spec.clearPassword()
+        }
     }
 
     fun verifyPin(pin: String, saltBase64: String, expectedHash: String): Boolean {
-        return hashPin(pin, saltBase64) == expectedHash
+        return MessageDigest.isEqual(
+            Base64.decode(hashPin(pin, saltBase64), Base64.NO_WRAP),
+            Base64.decode(expectedHash, Base64.NO_WRAP)
+        )
     }
 }

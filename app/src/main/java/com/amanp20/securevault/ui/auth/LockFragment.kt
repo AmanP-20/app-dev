@@ -62,6 +62,7 @@ class LockFragment : BaseBindingFragment<FragmentLockBinding>() {
 
     private fun observeViewModel() {
         viewModel.authenticated.observe(viewLifecycleOwner, EventObserver {
+            (requireActivity().application as SecureVaultApplication).isSessionAuthenticated = true
             findNavController().navigate(R.id.action_lockFragment_to_homeFragment)
         })
 
@@ -91,6 +92,7 @@ class LockFragment : BaseBindingFragment<FragmentLockBinding>() {
         biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
+                (requireActivity().application as SecureVaultApplication).isSessionAuthenticated = true
                 findNavController().navigate(R.id.action_lockFragment_to_homeFragment)
             }
 

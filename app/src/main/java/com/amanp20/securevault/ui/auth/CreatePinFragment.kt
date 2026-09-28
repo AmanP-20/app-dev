@@ -73,6 +73,7 @@ class CreatePinFragment : BaseBindingFragment<FragmentCreatePinBinding>() {
 
     private fun observeViewModel() {
         viewModel.createdPin.observe(viewLifecycleOwner, EventObserver {
+            (requireActivity().application as SecureVaultApplication).isSessionAuthenticated = true
             findNavController().navigate(R.id.action_createPinFragment_to_homeFragment)
         })
 

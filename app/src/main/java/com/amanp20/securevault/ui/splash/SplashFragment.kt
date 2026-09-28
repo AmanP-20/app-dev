@@ -17,6 +17,8 @@ import com.amanp20.securevault.viewmodel.ViewModelFactory
 
 class SplashFragment : BaseBindingFragment<FragmentSplashBinding>() {
 
+    private val handler = Handler(Looper.getMainLooper())
+
     private val viewModel: SplashViewModel by viewModels {
         ViewModelFactory((requireActivity().application as SecureVaultApplication).appContainer.secureVaultRepository)
     }
@@ -36,7 +38,12 @@ class SplashFragment : BaseBindingFragment<FragmentSplashBinding>() {
                 SplashDestination.Lock -> findNavController().navigate(R.id.action_splashFragment_to_lockFragment)
             }
         }
-        Handler(Looper.getMainLooper()).postDelayed({ viewModel.decideDestination() }, 2000)
+        handler.postDelayed({ viewModel.decideDestination() }, 2000)
         binding.logo.setImageResource(R.drawable.ic_secure_vault_logo)
+    }
+
+    override fun onDestroyView() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroyView()
     }
 }
