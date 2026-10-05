@@ -1,84 +1,238 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <resources>
+
+    <!-- App -->
+
     <string name="app_name">SecureVault</string>
+
+    <!-- Splash -->
+
     <string name="splash_title">SecureVault</string>
+
+    <!-- Authentication -->
+
     <string name="create_pin_title">Create PIN</string>
-    <string name="lock_title">App Lock</string>
-    <string name="home_title">Home</string>
-    <string name="settings_title">Settings</string>
-    <string name="change_pin_title">Change PIN</string>
-    <string name="documents_title">Documents</string>
-    <string name="notes_title">Notes</string>
-    <string name="biometric_title">Biometric Authentication</string>
-    <string name="about_title">About</string>
-    <string name="home_subtitle">Secure your documents, notes, and media.</string>
-    <string name="about_body">SecureVault is built for private storage and protected access.</string>
-    <string name="greeting_morning">Good Morning</string>
-    <string name="greeting_afternoon">Good Afternoon</string>
-    <string name="greeting_evening">Good Evening</string>
-    <string name="greeting_night">Good Night</string>
-    <string name="add_file_action">Add file</string>
-    <string name="search_action">Search</string>
-    <string name="search_documents_hint">Search documents</string>
-    <string name="sort_documents">Sort documents</string>
-    <string name="filter_documents">Filter documents</string>
-    <string name="empty_vault_title">Your Vault is Empty</string>
-    <string name="empty_vault_message">Add documents to securely manage them in SecureVault.</string>
-    <string name="no_app_to_open_file">No application found to open this file.</string>
-    <string name="file_access_revoked">This file is no longer accessible. Import it again to restore access.</string>
-    <string name="no_documents_found">No documents found.</string>
-    <string name="delete_document_message">Delete this document?</string>
-    <string name="cancel_action">Cancel</string>
-    <string name="delete_action">Delete</string>
-    <string name="locked_document">Locked document</string>
-    <string name="open_action">Open</string>
-    <string name="lock_action">Lock</string>
-    <string name="change_lock_action">Change lock</string>
-    <string name="protect_document">Protect document</string>
-    <string name="password_lock">Password or PIN</string>
-    <string name="biometric_lock">Biometric</string>
-    <string name="combined_lock">Password/PIN + biometric</string>
-    <string name="document_password_title">Set document password</string>
-    <string name="document_password_hint">Password or PIN</string>
-    <string name="confirm_document_password_hint">Confirm password or PIN</string>
-    <string name="document_password_too_short">Use at least 4 characters.</string>
-    <string name="enter_document_password">Enter document password</string>
-    <string name="unlock_document">Unlock document</string>
-    <string name="biometric_document_subtitle">Authenticate to open this document.</string>
-    <string name="biometric_unavailable">Biometric authentication is unavailable.</string>
-    <string name="document_details">%1$s • %2$s</string>
-    <string name="document_added">Added %1$s</string>
-    <string-array name="document_sort_options">
-        <item>Name: A → Z</item><item>Name: Z → A</item><item>Newest first</item>
-        <item>Oldest first</item><item>Largest first</item><item>Smallest first</item>
-    </string-array>
-    <string-array name="document_categories">
-        <item>All</item><item>PDF</item><item>Document</item><item>Image</item>
-        <item>Video</item><item>Audio</item><item>Other</item>
-    </string-array>
+    <string name="lock_title">SecureVault Locked</string>
+
     <string name="pin_hint">Enter PIN</string>
     <string name="confirm_pin_hint">Confirm PIN</string>
+
     <string name="current_pin_hint">Current PIN</string>
     <string name="new_pin_hint">New PIN</string>
     <string name="confirm_new_pin_hint">Confirm new PIN</string>
+
     <string name="create_pin_action">Create PIN</string>
     <string name="unlock_action">Unlock</string>
-    <string name="save_action">Save</string>
     <string name="use_pin">Use PIN</string>
+
     <string name="enable_biometric">Enable biometric unlock</string>
-    <string name="biometric_prompt_title">Unlock with fingerprint</string>
-    <string name="biometric_prompt_subtitle">Use your fingerprint to open SecureVault.</string>
-    <string name="error_pin_required">PIN is required.</string>
-    <string name="error_pin_length">Enter a valid 4-digit or 6-digit PIN.</string>
-    <string name="error_pin_mismatch">PINs do not match.</string>
-    <string name="error_wrong_pin">Wrong PIN.</string>
-    <string name="error_biometric_failed">Fingerprint not recognized.</string>
-    <string name="error_biometric_unavailable">Biometric authentication is unavailable on this device.</string>
-    <string name="error_database_initialization_failed">Database initialization failed.</string>
-    <string name="pin_length_4">4 digits</string>
-    <string name="pin_length_6">6 digits</string>
+
+    <string name="biometric_prompt_title">
+        Unlock with fingerprint
+    </string>
+
+    <string name="biometric_prompt_subtitle">
+        Use your fingerprint to open SecureVault.
+    </string>
+
+    <!-- Home -->
+
+    <string name="home_title">Home</string>
+
+    <string name="greeting_morning">
+        Good Morning
+    </string>
+
+    <string name="greeting_afternoon">
+        Good Afternoon
+    </string>
+
+    <string name="greeting_evening">
+        Good Evening
+    </string>
+
+    <string name="greeting_night">
+        Good Night
+    </string>
+
+    <string name="home_subtitle">
+        Your private files, secured on this device.
+    </string>
+
+    <!-- Vault -->
+
+    <string name="documents_title">Your Vault</string>
+
+    <string name="add_file_action">
+        Add files
+    </string>
+
+    <string name="search_action">
+        Search
+    </string>
+
+    <string name="search_documents_hint">
+        Search your files
+    </string>
+
+    <string name="sort_documents">
+        Sort files
+    </string>
+
+    <string name="filter_documents">
+        Filter files
+    </string>
+
+    <string name="empty_vault_title">
+        Your Vault is Empty
+    </string>
+
+    <string name="empty_vault_message">
+        Import a file to keep it encrypted and protected inside SecureVault.
+    </string>
+
+    <string name="no_documents_found">
+        No files found.
+    </string>
+
+    <!-- File -->
+
+    <string name="document_details">
+        %1$s • %2$s
+    </string>
+
+    <string name="document_added">
+        Added %1$s
+    </string>
+
+    <string name="locked_document">
+        Encrypted file
+    </string>
+
+    <string name="open_action">
+        Open
+    </string>
+
+    <string name="rename_action">
+        Rename
+    </string>
+
+    <string name="more_options">
+        More options
+    </string>
+
+    <string name="delete_action">
+        Delete
+    </string>
+
+    <string name="delete_document_message">
+        Delete this file permanently?
+    </string>
+
+    <!-- General -->
+
+    <string name="cancel_action">
+        Cancel
+    </string>
+
+    <string name="save_action">
+        Save
+    </string>
+
+    <string name="settings_title">
+        Settings
+    </string>
+
+    <string name="change_pin_title">
+        Change PIN
+    </string>
+
+    <string name="about_title">
+        About
+    </string>
+
+    <string name="about_body">
+        SecureVault keeps your files encrypted and stored locally on this device.
+    </string>
+
+    <!-- Errors -->
+
+    <string name="error_pin_required">
+        PIN is required.
+    </string>
+
+    <string name="error_pin_length">
+        Enter a valid 4-digit or 6-digit PIN.
+    </string>
+
+    <string name="error_pin_mismatch">
+        PINs do not match.
+    </string>
+
+    <string name="error_wrong_pin">
+        Wrong PIN.
+    </string>
+
+    <string name="error_biometric_failed">
+        Fingerprint not recognized.
+    </string>
+
+    <string name="error_biometric_unavailable">
+        Biometric authentication is unavailable on this device.
+    </string>
+
+    <string name="error_database_initialization_failed">
+        Database initialization failed.
+    </string>
+
+    <string name="no_app_to_open_file">
+        No application found to open this file.
+    </string>
+
+    <string name="file_access_revoked">
+        This file is no longer accessible.
+    </string>
+
+    <!-- PIN -->
+
+    <string name="pin_length_4">
+        4 digits
+    </string>
+
+    <string name="pin_length_6">
+        6 digits
+    </string>
+
     <string-array name="pin_lengths">
         <item>@string/pin_length_4</item>
         <item>@string/pin_length_6</item>
     </string-array>
+
+    <!-- File sorting -->
+
+    <string-array name="document_sort_options">
+
+        <item>Name: A → Z</item>
+        <item>Name: Z → A</item>
+        <item>Newest first</item>
+        <item>Oldest first</item>
+        <item>Largest first</item>
+        <item>Smallest first</item>
+
+    </string-array>
+
+    <!-- File categories -->
+
+    <string-array name="document_categories">
+
+        <item>All</item>
+        <item>Images</item>
+        <item>Videos</item>
+        <item>Audio</item>
+        <item>Documents</item>
+        <item>Other</item>
+
+    </string-array>
+
 </resources>
