@@ -19,3 +19,5 @@ Thumbs.db
 *.jks
 *.keystore
 keystore.properties
+
+app-dev
