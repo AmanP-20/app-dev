@@ -10,8 +10,11 @@ import com.amanp20.securevault.data.model.SecureDocument
 import com.amanp20.securevault.data.model.SecureNote
 
 @Database(
-    entities = [SecureDocument::class, SecureNote::class],
-    version = 5,
+    entities = [
+        SecureDocument::class,
+        SecureNote::class
+    ],
+    version = 6,
     exportSchema = false
 )
 abstract class SecureVaultDatabase : RoomDatabase() {
@@ -21,6 +24,7 @@ abstract class SecureVaultDatabase : RoomDatabase() {
     abstract fun secureNoteDao(): SecureNoteDao
 
     companion object {
+
         @Volatile
         private var instance: SecureVaultDatabase? = null
 
@@ -30,12 +34,22 @@ abstract class SecureVaultDatabase : RoomDatabase() {
                     context.applicationContext,
                     SecureVaultDatabase::class.java,
                     "secure_vault.db"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().also { instance = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(MIGRATION_5_6)
+                    .build()
+                    .also {
+                        instance = it
+                    }
             }
         }
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
+
                 database.execSQL(
                     """
                     CREATE TABLE secure_documents_new (
@@ -53,39 +67,148 @@ abstract class SecureVaultDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+
                 database.execSQL(
                     """
                     INSERT INTO secure_documents_new
-                    (id, name, uri, mimeType, fileSize, category, dateAdded, lastModified, isLocked, passwordHash, biometricProtected)
-                    SELECT id, title, filePath, mimeType, 0, 'Other', createdAt, updatedAt, isLocked, passwordHash, biometricProtected
+                    (
+                        id,
+                        name,
+                        uri,
+                        mimeType,
+                        fileSize,
+                        category,
+                        dateAdded,
+                        lastModified,
+                        isLocked,
+                        passwordHash,
+                        biometricProtected
+                    )
+                    SELECT
+                        id,
+                        title,
+                        filePath,
+                        mimeType,
+                        0,
+                        'Other',
+                        createdAt,
+                        updatedAt,
+                        isLocked,
+                        passwordHash,
+                        biometricProtected
                     FROM secure_documents
                     """.trimIndent()
                 )
-                database.execSQL("DROP TABLE secure_documents")
-                database.execSQL("ALTER TABLE secure_documents_new RENAME TO secure_documents")
-            }
 
+                database.execSQL(
+                    "DROP TABLE secure_documents"
+                )
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents_new RENAME TO secure_documents"
+                )
+            }
         }
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN encryptedFilePath TEXT")
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN encryptionIv TEXT")
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN lockedAt INTEGER")
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN encryptedFilePath TEXT"
+                )
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN encryptionIv TEXT"
+                )
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN lockedAt INTEGER"
+                )
             }
         }
 
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN lockType TEXT NOT NULL DEFAULT 'NONE'")
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN passwordSalt TEXT")
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN lockType TEXT NOT NULL DEFAULT 'NONE'"
+                )
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN passwordSalt TEXT"
+                )
             }
         }
 
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN failedAttempts INTEGER NOT NULL DEFAULT 0")
-                database.execSQL("ALTER TABLE secure_documents ADD COLUMN blockedUntil INTEGER")
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN failedAttempts INTEGER NOT NULL DEFAULT 0"
+                )
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents ADD COLUMN blockedUntil INTEGER"
+                )
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL(
+                    """
+                    CREATE TABLE secure_documents_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        originalName TEXT NOT NULL,
+                        encryptedFilePath TEXT NOT NULL,
+                        encryptionIv TEXT NOT NULL,
+                        mimeType TEXT NOT NULL,
+                        fileSize INTEGER NOT NULL,
+                        category TEXT NOT NULL,
+                        dateAdded INTEGER NOT NULL,
+                        lastModified INTEGER
+                    )
+                    """.trimIndent()
+                )
+
+                database.execSQL(
+                    """
+                    INSERT INTO secure_documents_new
+                    (
+                        id,
+                        originalName,
+                        encryptedFilePath,
+                        encryptionIv,
+                        mimeType,
+                        fileSize,
+                        category,
+                        dateAdded,
+                        lastModified
+                    )
+                    SELECT
+                        id,
+                        name,
+                        COALESCE(encryptedFilePath, ''),
+                        COALESCE(encryptionIv, ''),
+                        mimeType,
+                        fileSize,
+                        category,
+                        dateAdded,
+                        lastModified
+                    FROM secure_documents
+                    WHERE encryptedFilePath IS NOT NULL
+                    """.trimIndent()
+                )
+
+                database.execSQL(
+                    "DROP TABLE secure_documents"
+                )
+
+                database.execSQL(
+                    "ALTER TABLE secure_documents_new RENAME TO secure_documents"
+                )
             }
         }
     }
