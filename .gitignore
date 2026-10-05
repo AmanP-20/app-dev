@@ -1,11 +1,21 @@
-@"
+# Gradle
 .gradle/
 build/
 */build/
+
+# Android Studio / IDE
 .idea/
 *.iml
 local.properties
-.DS_Store
+captures/
 .externalNativeBuild/
 .cxx/
-"@ | Set-Content .gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Signing (never commit)
+*.jks
+*.keystore
+keystore.properties
