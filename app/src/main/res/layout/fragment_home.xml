@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -15,104 +17,140 @@
             android:id="@+id/greetingText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" />
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/home_subtitle" />
+            android:layout_marginTop="6dp"
+            android:text="@string/home_subtitle"
+            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
 
-        <androidx.gridlayout.widget.GridLayout
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/documentsCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/documents_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+                <TextView
+                    android:id="@+id/documentsCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="0"
+                    android:textAppearance="@style/TextAppearance.Material3.DisplaySmall"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Encrypted files in your vault"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Storage used"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+                <TextView
+                    android:id="@+id/storageUsedText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="0 B"
+                    android:textAppearance="@style/TextAppearance.Material3.DisplaySmall"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Files stored securely on this device"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/addFileButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:columnCount="2"
-            android:rowCount="2">
+            android:minHeight="56dp"
+            android:text="Add files"
+            android:textAllCaps="false"
+            app:cornerRadius="18dp" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/documentsCard"
-                android:layout_width="0dp"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/settingsCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_marginBottom="16dp"
-                android:layout_columnWeight="1"
-                app:cardCornerRadius="24dp">
+                android:gravity="center_vertical"
+                android:minHeight="72dp"
+                android:orientation="horizontal"
+                android:padding="20dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/documents_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
 
-                    <TextView
-                        android:id="@+id/documentsCountText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textAppearance="@style/TextAppearance.Material3.DisplaySmall" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginBottom="16dp"
-                android:layout_columnWeight="1"
-                app:cardCornerRadius="24dp">
+        </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/notes_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
-
-                    <TextView
-                        android:id="@+id/notesCountText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textAppearance="@style/TextAppearance.Material3.DisplaySmall" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/settingsCard"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnSpan="2"
-                android:layout_columnWeight="1"
-                app:cardCornerRadius="24dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="96dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </androidx.gridlayout.widget.GridLayout>
     </LinearLayout>
+
 </androidx.core.widget.NestedScrollView>
