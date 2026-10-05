@@ -1,11 +1,6 @@
 package com.amanp20.securevault.ui.documents
 
-import android.content.DialogInterface
-import android.content.Intent
-import android.content.ActivityNotFoundException
-import android.net.Uri
 import android.os.Bundle
-import android.text.InputType
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -13,12 +8,8 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -29,270 +20,576 @@ import com.google.android.material.snackbar.Snackbar
 import com.amanp20.securevault.R
 import com.amanp20.securevault.SecureVaultApplication
 import com.amanp20.securevault.data.model.SecureDocument
+import com.amanp20.securevault.data.repository.ImportResult
 import com.amanp20.securevault.databinding.FragmentDocumentsBinding
 import com.amanp20.securevault.ui.common.BaseBindingFragment
-import com.amanp20.securevault.viewmodel.DocumentSort
-import com.amanp20.securevault.viewmodel.SecureDocumentViewModel
-import com.amanp20.securevault.viewmodel.ViewModelFactory
+import com.amanp20.securevault.viewmodel.SecureVaultViewModel
+import com.amanp20.securevault.viewmodel.SecureVaultViewModelFactory
 
 class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
-    private val viewModel: SecureDocumentViewModel by viewModels<SecureDocumentViewModel> {
-        ViewModelFactory((requireActivity().application as SecureVaultApplication).appContainer.secureVaultRepository)
-    }
-    private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) viewModel.importUris(requireContext().contentResolver, uris)
-    }
+
     private lateinit var adapter: DocumentAdapter
 
-    override fun inflateBinding(inflater: LayoutInflater, container: ViewGroup?) =
-        FragmentDocumentsBinding.inflate(inflater, container, false)
+    private val viewModel: SecureVaultViewModel by viewModels {
+        SecureVaultViewModelFactory(
+            (requireActivity().application as SecureVaultApplication)
+                .appContainer
+                .secureVaultRepository
+        )
+    }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+    private val picker =
+        registerForActivityResult(
+            ActivityResultContracts.OpenMultipleDocuments()
+        ) { uris ->
+
+            if (uris.isEmpty()) {
+                return@registerForActivityResult
+            }
+
+            uris.forEach { uri ->
+
+                importFile(uri)
+            }
+        }
+
+    override fun inflateBinding(
+        inflater: LayoutInflater,
+        container: ViewGroup?
+    ): FragmentDocumentsBinding {
+
+        return FragmentDocumentsBinding.inflate(
+            inflater,
+            container,
+            false
+        )
+    }
+
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?
+    ) {
+
+        super.onViewCreated(
+            view,
+            savedInstanceState
+        )
+
+        setupToolbar()
+
+        setupMenu()
+
+        setupRecyclerView()
+
+        setupFilePicker()
+
+        observeDocuments()
+    }
+
+    private fun setupToolbar() {
+
+        binding.toolbar.setNavigationOnClickListener {
+
+            findNavController().navigateUp()
+        }
+    }
+
+    private fun setupMenu() {
+
         requireActivity().addMenuProvider(
             object : MenuProvider {
-                override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                    menuInflater.inflate(R.menu.documents_menu, menu)
-                    val searchItem = menu.findItem(R.id.action_search)
-                    val searchView = searchItem.actionView as? SearchView ?: return
-                    searchView.queryHint = getString(R.string.search_documents_hint)
-                    searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                        override fun onQueryTextSubmit(query: String?) = true
 
-                        override fun onQueryTextChange(newText: String?) =
-                            viewModel.setQuery(newText.orEmpty()).let { true }
-                    })
+                override fun onCreateMenu(
+                    menu: Menu,
+                    menuInflater: MenuInflater
+                ) {
+
+                    menuInflater.inflate(
+                        R.menu.documents_menu,
+                        menu
+                    )
+
+                    val searchItem =
+                        menu.findItem(
+                            R.id.action_search
+                        )
+
+                    val searchView =
+                        searchItem.actionView as? SearchView
+                            ?: return
+
+                    searchView.queryHint =
+                        getString(
+                            R.string.search_documents_hint
+                        )
+
+                    searchView.setOnQueryTextListener(
+                        object :
+                            SearchView.OnQueryTextListener {
+
+                            override fun onQueryTextSubmit(
+                                query: String?
+                            ): Boolean {
+
+                                return true
+                            }
+
+                            override fun onQueryTextChange(
+                                newText: String?
+                            ): Boolean {
+
+                                filterDocuments(
+                                    newText.orEmpty()
+                                )
+
+                                return true
+                            }
+                        }
+                    )
                 }
 
-                override fun onMenuItemSelected(item: MenuItem): Boolean =
-                    handleMenuItemSelected(item)
+                override fun onMenuItemSelected(
+                    item: MenuItem
+                ): Boolean {
+
+                    return when (item.itemId) {
+
+                        R.id.action_sort -> {
+
+                            showSortDialog()
+
+                            true
+                        }
+
+                        R.id.action_filter -> {
+
+                            showFilterDialog()
+
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
             },
             viewLifecycleOwner,
             Lifecycle.State.RESUMED
         )
-        adapter = DocumentAdapter(::openDocument, ::showDocumentMenu)
-        binding.documentsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
-        binding.documentsRecyclerView.adapter = adapter
+    }
+
+    private fun setupRecyclerView() {
+
+        adapter = DocumentAdapter(
+            ::openDocument,
+            ::showDocumentMenu
+        )
+
+        binding.documentsRecyclerView.layoutManager =
+            LinearLayoutManager(
+                requireContext()
+            )
+
+        binding.documentsRecyclerView.adapter =
+            adapter
+    }
+
+    private fun setupFilePicker() {
+
         binding.addFileButton.setOnClickListener {
+
             picker.launch(
-                arrayOf(
-                    "application/pdf", "text/*", "image/*", "video/*", "audio/*",
-                    "application/msword", "application/vnd.openxmlformats-officedocument.*"
-                )
+                arrayOf("*/*")
             )
         }
-        viewModel.documents.observe(viewLifecycleOwner) {
-            adapter.submitList(it)
-            binding.emptyState.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
-            binding.documentsRecyclerView.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
-        }
-        viewModel.emptyStateMessage.observe(viewLifecycleOwner) { messageRes ->
-            binding.emptyStateMessage.setText(messageRes)
-        }
-        viewModel.message.observe(viewLifecycleOwner) { message ->
-            if (!message.isNullOrBlank()) Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+    }
+
+    private fun observeDocuments() {
+
+        viewModel.documents.observe(
+            viewLifecycleOwner
+        ) { documents ->
+
+            adapter.submitList(
+                documents
+            )
+
+            updateEmptyState(
+                documents.isEmpty()
+            )
         }
     }
 
-    private fun handleMenuItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        R.id.action_sort -> {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.sort_documents)
-                .setItems(R.array.document_sort_options) { _: DialogInterface, which: Int ->
-                    viewModel.setSort(DocumentSort.values()[which])
-                }.show()
-            true
-        }
-        R.id.action_filter -> {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.filter_documents)
-                .setSingleChoiceItems(resources.getStringArray(R.array.document_categories), 0) {
-                    dialog: DialogInterface,
-                    which: Int ->
-                    viewModel.setCategory(resources.getStringArray(R.array.document_categories)[which])
-                    dialog.dismiss()
-                }.show()
-            true
-        }
-        else -> false
-    }
+    private fun filterDocuments(
+        query: String
+    ) {
 
-    private fun openDocument(document: SecureDocument) {
-        if (document.isLocked) {
-            authenticateLockedDocument(document)
-            return
-        }
-        openUri(Uri.parse(document.uri), document.mimeType)
-    }
+        val allDocuments =
+            viewModel.documents.value
+                ?: emptyList()
 
-    private fun openUri(uri: Uri, mimeType: String) {
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        intent.type = mimeType
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        try {
-            startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
-            Snackbar.make(binding.root, R.string.no_app_to_open_file, Snackbar.LENGTH_LONG).show()
-        } catch (_: SecurityException) {
-            Snackbar.make(binding.root, R.string.file_access_revoked, Snackbar.LENGTH_LONG).show()
-        }
-    }
+        val filtered =
+            if (query.isBlank()) {
 
-    private fun showDocumentMenu(document: SecureDocument) {
-        val options = if (document.isLocked) {
-            arrayOf(getString(R.string.open_action), getString(R.string.unlock_action), getString(R.string.change_lock_action), getString(R.string.delete_action))
-        } else {
-            arrayOf(getString(R.string.open_action), getString(R.string.lock_action), getString(R.string.delete_action))
-        }
-        MaterialAlertDialogBuilder(requireContext())
-            .setItems(options) { _: DialogInterface, which: Int ->
-                when {
-                    !document.isLocked && which == 0 -> openDocument(document)
-                    !document.isLocked && which == 1 -> configureLock(document)
-                    !document.isLocked -> confirmDelete(document)
-                    which == 0 -> openDocument(document)
-                    which == 1 -> removeLock(document)
-                    which == 2 -> changeLock(document)
-                    else -> confirmDelete(document)
+                allDocuments
+
+            } else {
+
+                allDocuments.filter {
+
+                    it.originalName
+                        .contains(
+                            query,
+                            ignoreCase = true
+                        )
                 }
-            }.show()
-    }
-
-    private fun configureLock(document: SecureDocument) {
-        val choices = arrayOf(getString(R.string.password_lock), getString(R.string.biometric_lock), getString(R.string.combined_lock))
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.protect_document)
-            .setSingleChoiceItems(choices, 0) {
-                dialog: DialogInterface,
-                which: Int ->
-                val type = arrayOf("PASSWORD", "BIOMETRIC", "PIN_AND_BIOMETRIC")[which]
-                if (type == "BIOMETRIC" && !biometricsAvailable()) {
-                    Snackbar.make(binding.root, R.string.biometric_unavailable, Snackbar.LENGTH_LONG).show()
-                } else if (type == "BIOMETRIC") {
-                    viewModel.lock(document, type)
-                } else {
-                    dialog.dismiss()
-                    passwordDialog(document, type)
-                }
-                if (type == "BIOMETRIC") dialog.dismiss()
-            }.show()
-    }
-
-    private fun changeLock(document: SecureDocument) {
-        authenticateLockedDocumentForChange(document) {
-            viewModel.removeProtection(document) {
-                configureLock(document.copy(isLocked = false, lockType = "NONE", passwordHash = null))
             }
-        }
-    }
 
-    private fun passwordDialog(document: SecureDocument, type: String) {
-        val input = passwordInput(R.string.document_password_hint)
-        val confirmation = passwordInput(R.string.confirm_document_password_hint)
-        val fields = LinearLayout(requireContext())
-        fields.orientation = LinearLayout.VERTICAL
-        fields.addView(input)
-        fields.addView(confirmation)
-        fields.setPadding(48, 0, 48, 0)
-        val fieldsView: View = fields
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.document_password_title)
-            .setView(fieldsView)
-            .setNegativeButton(R.string.cancel_action, null)
-            .setPositiveButton(R.string.save_action) { _: DialogInterface, _: Int ->
-                if (input.text.length < 4) {
-                    Snackbar.make(binding.root, R.string.document_password_too_short, Snackbar.LENGTH_LONG).show()
-                } else if (input.text.toString() != confirmation.text.toString()) {
-                    Snackbar.make(binding.root, R.string.error_pin_mismatch, Snackbar.LENGTH_LONG).show()
-                } else {
-                    viewModel.lock(document, type, input.text.toString())
-                }
-            }.show()
-    }
+        adapter.submitList(
+            filtered
+        )
 
-    private fun authenticateLockedDocument(document: SecureDocument) {
-        if (requiresBiometric(document.lockType)) showBiometric(document) else passwordUnlock(document)
-    }
-
-    private fun passwordUnlock(document: SecureDocument) {
-        val input = passwordInput(R.string.document_password_hint)
-        val inputView: View = input
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.enter_document_password)
-            .setView(inputView)
-            .setNegativeButton(R.string.cancel_action, null)
-            .setPositiveButton(R.string.unlock_action) { _: DialogInterface, _: Int ->
-                viewModel.unlock(document, input.text.toString()) { uri -> openUri(uri, document.mimeType) }
-            }.show()
-    }
-
-    private fun showBiometric(document: SecureDocument) {
-        val executor = ContextCompat.getMainExecutor(requireContext())
-        val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                if (document.lockType == "PIN_AND_BIOMETRIC") passwordUnlock(document)
-                else viewModel.unlock(document, null) { uri -> openUri(uri, document.mimeType) }
-            }
-        })
-        prompt.authenticate(
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle(getString(R.string.unlock_document))
-                .setSubtitle(getString(R.string.biometric_document_subtitle))
-                .setNegativeButtonText(getString(R.string.cancel_action))
-                .build()
+        updateEmptyState(
+            filtered.isEmpty()
         )
     }
 
-    private fun removeLock(document: SecureDocument) {
-        authenticateLockedDocumentForChange(document) {
-            viewModel.removeProtection(document)
-        }
+    private fun updateEmptyState(
+        empty: Boolean
+    ) {
+
+        binding.emptyState.visibility =
+            if (empty) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        binding.documentsRecyclerView.visibility =
+            if (empty) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
     }
 
-    private fun authenticateLockedDocumentForChange(document: SecureDocument, onAuthenticated: () -> Unit) {
-        if (requiresBiometric(document.lockType)) {
-            val executor = ContextCompat.getMainExecutor(requireContext())
-            BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    if (document.passwordHash != null) passwordDialogForAction(document, onAuthenticated) else onAuthenticated()
+    private fun importFile(
+        uri: android.net.Uri
+    ) {
+
+        viewModel.importFile(
+            uri = uri,
+
+            onResult = { result ->
+
+                when (result) {
+
+                    ImportResult.Added -> {
+
+                        showMessage(
+                            "File encrypted and added"
+                        )
+                    }
+
+                    ImportResult.Duplicate -> {
+
+                        showMessage(
+                            "A file with this name already exists"
+                        )
+                    }
                 }
-            }).authenticate(BiometricPrompt.PromptInfo.Builder().setTitle(getString(R.string.unlock_document))
-                .setNegativeButtonText(getString(R.string.cancel_action)).build())
-        } else passwordDialogForAction(document, onAuthenticated)
+            },
+
+            onError = { error ->
+
+                showMessage(
+                    error.message
+                        ?: "Unable to import file"
+                )
+            }
+        )
     }
 
-    private fun passwordDialogForAction(document: SecureDocument, onAuthenticated: () -> Unit) {
-        val input = passwordInput(null)
-        val inputView: View = input
-        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.enter_document_password).setView(inputView)
-            .setNegativeButton(R.string.cancel_action, null).setPositiveButton(R.string.unlock_action) { _: DialogInterface, _: Int ->
-                viewModel.unlock(document, input.text.toString()) { onAuthenticated() }
-            }.show()
+    private fun openDocument(
+        document: SecureDocument
+    ) {
+
+        viewModel.openDocument(
+            document = document,
+
+            onResult = { file ->
+
+                showMessage(
+                    "File decrypted for viewing"
+                )
+
+                // The internal viewer will be connected
+                // in a later block.
+            },
+
+            onError = { error ->
+
+                showMessage(
+                    error.message
+                        ?: "Unable to open file"
+                )
+            }
+        )
     }
 
-    private fun biometricsAvailable(): Boolean =
-        BiometricManager.from(requireContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
-            BiometricManager.BIOMETRIC_SUCCESS
+    private fun showDocumentMenu(
+        document: SecureDocument
+    ) {
 
-    private fun passwordInput(hintResId: Int?): EditText {
-        val input = EditText(requireContext())
-        if (hintResId != null) {
-            input.hint = getString(hintResId)
-        }
-        input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        return input
-    }
+        val options = arrayOf(
+            getString(
+                R.string.open_action
+            ),
+            "Rename",
+            getString(
+                R.string.delete_action
+            )
+        )
 
-    private fun requiresBiometric(lockType: String): Boolean {
-        return lockType == "BIOMETRIC" || lockType == "PIN_AND_BIOMETRIC"
-    }
+        MaterialAlertDialogBuilder(
+            requireContext()
+        )
+            .setItems(options) { _, which ->
 
-    private fun confirmDelete(document: SecureDocument) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setMessage(R.string.delete_document_message)
-            .setNegativeButton(R.string.cancel_action, null)
-            .setPositiveButton(R.string.delete_action) { _: DialogInterface, _: Int -> viewModel.delete(document) }
+                when (which) {
+
+                    0 -> openDocument(
+                        document
+                    )
+
+                    1 -> showRenameDialog(
+                        document
+                    )
+
+                    2 -> confirmDelete(
+                        document
+                    )
+                }
+            }
             .show()
+    }
+
+    private fun showRenameDialog(
+        document: SecureDocument
+    ) {
+
+        val input =
+            EditText(requireContext())
+
+        input.setText(
+            document.originalName
+        )
+
+        input.selectAll()
+
+        MaterialAlertDialogBuilder(
+            requireContext()
+        )
+            .setTitle("Rename file")
+            .setView(input)
+            .setNegativeButton(
+                R.string.cancel_action,
+                null
+            )
+            .setPositiveButton(
+                R.string.save_action
+            ) { _, _ ->
+
+                val newName =
+                    input.text
+                        .toString()
+                        .trim()
+
+                if (newName.isBlank()) {
+
+                    showMessage(
+                        "File name cannot be empty"
+                    )
+
+                    return@setPositiveButton
+                }
+
+                viewModel.renameDocument(
+                    document,
+                    newName,
+
+                    onResult = {
+
+                        showMessage(
+                            "File renamed"
+                        )
+                    },
+
+                    onError = { error ->
+
+                        showMessage(
+                            error.message
+                                ?: "Unable to rename file"
+                        )
+                    }
+                )
+            }
+            .show()
+    }
+
+    private fun confirmDelete(
+        document: SecureDocument
+    ) {
+
+        MaterialAlertDialogBuilder(
+            requireContext()
+        )
+            .setTitle("Delete file?")
+            .setMessage(
+                "This permanently removes the encrypted file from your vault."
+            )
+            .setNegativeButton(
+                R.string.cancel_action,
+                null
+            )
+            .setPositiveButton(
+                R.string.delete_action
+            ) { _, _ ->
+
+                viewModel.deleteDocument(
+                    document,
+
+                    onResult = {
+
+                        showMessage(
+                            "File deleted"
+                        )
+                    },
+
+                    onError = { error ->
+
+                        showMessage(
+                            error.message
+                                ?: "Unable to delete file"
+                        )
+                    }
+                )
+            }
+            .show()
+    }
+
+    private fun showSortDialog() {
+
+        val options = arrayOf(
+            "Newest first",
+            "Oldest first",
+            "Name A-Z",
+            "Name Z-A",
+            "Largest first",
+            "Smallest first"
+        )
+
+        MaterialAlertDialogBuilder(
+            requireContext()
+        )
+            .setTitle("Sort files")
+            .setItems(options) { _, which ->
+
+                val documents =
+                    viewModel.documents.value
+                        ?: emptyList()
+
+                val sorted =
+                    when (which) {
+
+                        0 ->
+                            documents.sortedByDescending {
+                                it.dateAdded
+                            }
+
+                        1 ->
+                            documents.sortedBy {
+                                it.dateAdded
+                            }
+
+                        2 ->
+                            documents.sortedBy {
+                                it.originalName.lowercase()
+                            }
+
+                        3 ->
+                            documents.sortedByDescending {
+                                it.originalName.lowercase()
+                            }
+
+                        4 ->
+                            documents.sortedByDescending {
+                                it.fileSize
+                            }
+
+                        else ->
+                            documents.sortedBy {
+                                it.fileSize
+                            }
+                    }
+
+                adapter.submitList(
+                    sorted
+                )
+            }
+            .show()
+    }
+
+    private fun showFilterDialog() {
+
+        val categories = arrayOf(
+            "All",
+            "Images",
+            "Videos",
+            "Audio",
+            "Documents",
+            "Other"
+        )
+
+        MaterialAlertDialogBuilder(
+            requireContext()
+        )
+            .setTitle("Filter files")
+            .setItems(categories) { _, which ->
+
+                val documents =
+                    viewModel.documents.value
+                        ?: emptyList()
+
+                val filtered =
+                    if (which == 0) {
+
+                        documents
+
+                    } else {
+
+                        documents.filter {
+                            it.category.equals(
+                                categories[which],
+                                ignoreCase = true
+                            )
+                        }
+                    }
+
+                adapter.submitList(
+                    filtered
+                )
+            }
+            .show()
+    }
+
+    private fun showMessage(
+        message: String
+    ) {
+
+        Snackbar.make(
+            binding.root,
+            message,
+            Snackbar.LENGTH_LONG
+        ).show()
     }
 }
