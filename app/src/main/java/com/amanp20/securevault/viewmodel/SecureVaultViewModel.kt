@@ -35,8 +35,29 @@ class SecureVaultViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val result = repository.importFile(uri)
+                val result =
+                    repository.importFile(uri)
+
                 onResult(result)
+
+            } catch (error: Throwable) {
+                onError(error)
+            }
+        }
+    }
+
+    fun getDocumentById(
+        id: Long,
+        onResult: (SecureDocument?) -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val document =
+                    repository.getDocumentById(id)
+
+                onResult(document)
+
             } catch (error: Throwable) {
                 onError(error)
             }
@@ -50,8 +71,11 @@ class SecureVaultViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val file = repository.openDocument(document)
+                val file =
+                    repository.openDocument(document)
+
                 onResult(file)
+
             } catch (error: Throwable) {
                 onError(error)
             }
@@ -67,6 +91,7 @@ class SecureVaultViewModel(
             try {
                 repository.deleteDocument(document)
                 onResult()
+
             } catch (error: Throwable) {
                 onError(error)
             }
@@ -85,7 +110,9 @@ class SecureVaultViewModel(
                     document,
                     newName
                 )
+
                 onResult()
+
             } catch (error: Throwable) {
                 onError(error)
             }
@@ -98,8 +125,11 @@ class SecureVaultViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val valid = repository.verifyPin(pin)
+                val valid =
+                    repository.verifyPin(pin)
+
                 onResult(valid)
+
             } catch (_: Throwable) {
                 onResult(false)
             }
@@ -118,7 +148,9 @@ class SecureVaultViewModel(
                     pin,
                     pinLength
                 )
+
                 onResult()
+
             } catch (error: Throwable) {
                 onError(error)
             }
@@ -139,30 +171,31 @@ class SecureVaultViewModel(
                     newPin,
                     newPinLength
                 )
+
                 onResult()
+
             } catch (error: Throwable) {
                 onError(error)
             }
         }
     }
 
-    fun hasStoredPin(): Boolean {
-        return repository.hasStoredPin()
-    }
+    fun hasStoredPin(): Boolean =
+        repository.hasStoredPin()
 
-    fun getStoredPinLength(): Int {
-        return repository.getStoredPinLength()
-    }
+    fun getStoredPinLength(): Int =
+        repository.getStoredPinLength()
 
-    fun isBiometricEnabled(): Boolean {
-        return repository.isBiometricEnabled()
-    }
+    fun isBiometricEnabled(): Boolean =
+        repository.isBiometricEnabled()
 
     fun setBiometricEnabled(
         enabled: Boolean
     ) {
         viewModelScope.launch {
-            repository.setBiometricEnabled(enabled)
+            repository.setBiometricEnabled(
+                enabled
+            )
         }
     }
 }
