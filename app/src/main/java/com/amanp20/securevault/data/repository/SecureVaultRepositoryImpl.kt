@@ -11,101 +11,90 @@ import com.amanp20.securevault.data.model.SecureDocument
 import com.amanp20.securevault.data.security.DocumentSecurityManager
 import com.amanp20.securevault.utils.FileMetadataUtils
 import com.amanp20.securevault.utils.SecurityPreferencesManager
-import com.amanp20.securevault.utils.addSourceLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class SecureVaultRepositoryImpl(
     context: Context
 ) : SecureVaultRepository {
 
-    private val applicationContext =
+    private val appContext =
         context.applicationContext
 
-    private val preferencesManager =
-        SecurityPreferencesManager(applicationContext)
+    private val preferences =
+        SecurityPreferencesManager(
+            appContext
+        )
 
     private val securityManager =
-        DocumentSecurityManager(applicationContext)
+        DocumentSecurityManager(
+            appContext
+        )
 
     private val databaseStatusMutable =
         MutableLiveData<DatabaseStatus>()
 
-    private val documentCountMutable =
-        MutableLiveData(0)
-
-    private val totalStorageMutable =
-        MutableLiveData(0L)
-
-    private val database: SecureVaultDatabase? =
+    private val database =
         runCatching {
 
             SecureVaultDatabase.getInstance(
-                applicationContext
+                appContext
             )
 
-        }.onSuccess { db ->
+        }.onSuccess {
 
-            databaseStatusMutable.value =
+            databaseStatusMutable.postValue(
                 DatabaseStatus.Ready
-
-            documentCountMutable.addSourceLiveData(
-                db.secureDocumentDao()
-                    .observeDocumentCount()
             )
 
-            totalStorageMutable.addSourceLiveData(
-                db.secureDocumentDao()
-                    .observeTotalSize()
-            )
+        }.onFailure {
 
-        }.getOrElse {
-
-            databaseStatusMutable.value =
+            databaseStatusMutable.postValue(
                 DatabaseStatus.Error(
-                    applicationContext.getString(
+                    appContext.getString(
                         R.string.error_database_initialization_failed
                     )
                 )
+            )
+        }.getOrNull()
 
-            null
-        }
+    private val dao
+        get() = database?.secureDocumentDao()
 
     override val databaseStatus:
         LiveData<DatabaseStatus> =
         databaseStatusMutable
 
+    override val documents:
+        LiveData<List<SecureDocument>> =
+        dao?.observeAll()
+            ?: MutableLiveData(emptyList())
+
     override val documentCount:
         LiveData<Int> =
-        documentCountMutable
+        dao?.observeDocumentCount()
+            ?: MutableLiveData(0)
 
     override val totalStorageUsed:
         LiveData<Long> =
-        totalStorageMutable
-
-    override val documents:
-        LiveData<List<SecureDocument>> =
-        database
-            ?.secureDocumentDao()
-            ?.observeAll()
-            ?: MutableLiveData(emptyList())
+        dao?.observeTotalSize()
+            ?: MutableLiveData(0L)
 
     override fun hasStoredPin(): Boolean =
-        preferencesManager.hasStoredPin()
+        preferences.hasStoredPin()
 
     override fun getStoredPinLength(): Int =
-        preferencesManager.getStoredPinLength()
+        preferences.getStoredPinLength()
 
     override fun isBiometricEnabled(): Boolean =
-        preferencesManager.isBiometricEnabled()
+        preferences.isBiometricEnabled()
 
     override suspend fun saveNewPin(
         pin: String,
         pinLength: Int
     ) = withContext(Dispatchers.IO) {
 
-        preferencesManager.savePin(
+        preferences.savePin(
             pin,
             pinLength
         )
@@ -113,10 +102,13 @@ class SecureVaultRepositoryImpl(
 
     override suspend fun verifyPin(
         pin: String
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Boolean =
+        withContext(Dispatchers.IO) {
 
-        preferencesManager.verifyPin(pin)
-    }
+            preferences.verifyPin(
+                pin
+            )
+        }
 
     override suspend fun changePin(
         currentPin: String,
@@ -125,14 +117,16 @@ class SecureVaultRepositoryImpl(
     ) = withContext(Dispatchers.IO) {
 
         check(
-            preferencesManager.verifyPin(currentPin)
+            preferences.verifyPin(
+                currentPin
+            )
         ) {
-            applicationContext.getString(
+            appContext.getString(
                 R.string.error_wrong_pin
             )
         }
 
-        preferencesManager.savePin(
+        preferences.savePin(
             newPin,
             newPinLength
         )
@@ -142,104 +136,122 @@ class SecureVaultRepositoryImpl(
         enabled: Boolean
     ) = withContext(Dispatchers.IO) {
 
-        preferencesManager.setBiometricEnabled(
+        preferences.setBiometricEnabled(
             enabled
         )
     }
 
     override suspend fun importFile(
         uri: Uri
-    ): ImportResult = withContext(Dispatchers.IO) {
+    ): ImportResult =
+        withContext(Dispatchers.IO) {
 
-        val dao = requireDao()
+            val documentDao =
+                requireNotNull(dao)
 
-        val metadata =
-            FileMetadataUtils.readMetadata(
-                applicationContext,
-                uri
-            )
-
-        val originalName =
-            metadata.name
-
-        if (dao.existsByName(originalName)) {
-            return@withContext ImportResult.Duplicate
-        }
-
-        val inputStream =
-            applicationContext.contentResolver
-                .openInputStream(uri)
-                ?: error(
-                    "Unable to open selected file"
+            val metadata =
+                FileMetadataUtils.readMetadata(
+                    appContext,
+                    uri
                 )
 
-        val encryptedName =
-            "${System.currentTimeMillis()}_${System.nanoTime()}.enc"
+            if (
+                documentDao.existsByName(
+                    metadata.name
+                )
+            ) {
+                return@withContext ImportResult.Duplicate
+            }
 
-        val encrypted =
+            val encryptedName =
+                "${System.currentTimeMillis()}_${
+                    System.nanoTime()
+                }.enc"
+
+            val encrypted =
+                appContext
+                    .contentResolver
+                    .openInputStream(uri)
+                    ?.use { input ->
+
+                        securityManager.encrypt(
+                            input,
+                            encryptedName
+                        )
+
+                    }
+                    ?: error(
+                        "Unable to open selected file"
+                    )
+
             try {
 
-                securityManager.encrypt(
-                    input = inputStream,
-                    fileName = encryptedName
+                documentDao.insert(
+                    SecureDocument(
+                        originalName =
+                            metadata.name,
+
+                        encryptedFilePath =
+                            encrypted.path,
+
+                        encryptionIv =
+                            encrypted.iv,
+
+                        mimeType =
+                            metadata.mimeType,
+
+                        fileSize =
+                            metadata.size,
+
+                        category =
+                            metadata.category,
+
+                        dateAdded =
+                            System.currentTimeMillis(),
+
+                        lastModified =
+                            metadata.lastModified
+                    )
                 )
+
+                ImportResult.Added
 
             } catch (error: Throwable) {
 
-                inputStream.close()
+                securityManager
+                    .deleteEncryptedFile(
+                        encrypted.path
+                    )
 
                 throw error
             }
-
-        try {
-
-            dao.insert(
-                SecureDocument(
-                    originalName = originalName,
-                    encryptedFilePath = encrypted.path,
-                    encryptionIv = encrypted.iv,
-                    mimeType = metadata.mimeType,
-                    fileSize = metadata.size,
-                    category = metadata.category,
-                    dateAdded = System.currentTimeMillis(),
-                    lastModified = metadata.lastModified
-                )
-            )
-
-            ImportResult.Added
-
-        } catch (error: Throwable) {
-
-            securityManager.deleteEncryptedFile(
-                encrypted.path
-            )
-
-            throw error
         }
-    }
 
     override suspend fun getDocumentById(
         id: Long
-    ): SecureDocument? = withContext(Dispatchers.IO) {
+    ): SecureDocument? =
+        withContext(Dispatchers.IO) {
 
-        requireDao().getById(id)
-    }
+            requireNotNull(dao)
+                .getById(id)
+        }
 
     override suspend fun openDocument(
         document: SecureDocument
-    ): File = withContext(Dispatchers.IO) {
+    ): java.io.File =
+        withContext(Dispatchers.IO) {
 
-        securityManager.decryptToCache(
-            encryptedPath =
-                document.encryptedFilePath,
+            securityManager.decryptToCache(
+                encryptedPath =
+                    document.encryptedFilePath,
 
-            encodedIv =
-                document.encryptionIv,
+                encodedIv =
+                    document.encryptionIv,
 
-            outputName =
-                document.originalName
-        )
-    }
+                outputName =
+                    document.originalName
+            )
+        }
 
     override suspend fun deleteDocument(
         document: SecureDocument
@@ -249,9 +261,8 @@ class SecureVaultRepositoryImpl(
             document.encryptedFilePath
         )
 
-        requireDao().delete(
-            document
-        )
+        requireNotNull(dao)
+            .delete(document)
     }
 
     override suspend fun renameDocument(
@@ -268,28 +279,26 @@ class SecureVaultRepositoryImpl(
             "File name cannot be empty"
         }
 
+        val documentDao =
+            requireNotNull(dao)
+
         require(
             cleanedName == document.originalName ||
-                !requireDao().existsByName(cleanedName)
+                !documentDao.existsByName(
+                    cleanedName
+                )
         ) {
             "A file with this name already exists"
         }
 
-        requireDao().update(
+        documentDao.update(
             document.copy(
-                originalName = cleanedName,
+                originalName =
+                    cleanedName,
+
                 lastModified =
                     System.currentTimeMillis()
             )
         )
     }
-
-    private fun requireDao() =
-        requireNotNull(database) {
-
-            applicationContext.getString(
-                R.string.error_database_initialization_failed
-            )
-
-        }.secureDocumentDao()
 }
