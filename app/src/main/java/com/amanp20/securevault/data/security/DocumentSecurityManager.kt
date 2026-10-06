@@ -2,6 +2,8 @@ package com.amanp20.securevault.data.security
 
 import android.content.Context
 import android.util.Base64
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import java.io.File
 import java.io.InputStream
 import java.security.KeyStore
@@ -12,47 +14,51 @@ import javax.crypto.CipherOutputStream
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 
 class DocumentSecurityManager(
     context: Context
 ) {
 
-    private val appContext = context.applicationContext
+    private val appContext =
+        context.applicationContext
 
-    private val vaultDirectory = File(
-        appContext.filesDir,
-        "vault"
-    ).apply {
-        mkdirs()
-    }
+    private val vaultDirectory =
+        File(
+            appContext.filesDir,
+            "vault"
+        ).apply {
+            mkdirs()
+        }
 
-    private val previewDirectory = File(
-        appContext.cacheDir,
-        "vault_previews"
-    ).apply {
-        mkdirs()
-    }
+    private val previewDirectory =
+        File(
+            appContext.cacheDir,
+            "vault_previews"
+        ).apply {
+            mkdirs()
+        }
 
     fun encrypt(
         input: InputStream,
         fileName: String
     ): EncryptedDocument {
 
-        val destination = File(
-            vaultDirectory,
-            fileName
-        )
+        val destination =
+            File(
+                vaultDirectory,
+                sanitizeFileName(fileName)
+            )
 
-        val iv = ByteArray(GCM_IV_LENGTH)
+        val iv =
+            ByteArray(GCM_IV_LENGTH)
 
         SecureRandom().nextBytes(iv)
 
-        val cipher = createCipher(
-            mode = Cipher.ENCRYPT_MODE,
-            iv = iv
-        )
+        val cipher =
+            createCipher(
+                mode = Cipher.ENCRYPT_MODE,
+                iv = iv
+            )
 
         try {
 
@@ -65,7 +71,9 @@ class DocumentSecurityManager(
                         cipher
                     ).use { encryptedOutput ->
 
-                        source.copyTo(encryptedOutput)
+                        source.copyTo(
+                            encryptedOutput
+                        )
                     }
                 }
             }
@@ -92,28 +100,43 @@ class DocumentSecurityManager(
         outputName: String
     ): File {
 
-        val encryptedFile = File(encryptedPath)
+        val encryptedFile =
+            File(encryptedPath)
 
-        require(encryptedFile.isFile) {
+        require(
+            encryptedFile.isFile
+        ) {
             "Encrypted file does not exist"
         }
 
-        clearExpiredPreviews()
+        clearPreviewCache()
 
-        val outputFile = File(
-            previewDirectory,
-            "${System.currentTimeMillis()}_$outputName"
-        )
+        val safeName =
+            sanitizeFileName(outputName)
 
-        val iv = Base64.decode(
-            encodedIv,
-            Base64.NO_WRAP
-        )
+        val outputFile =
+            File(
+                previewDirectory,
+                "${System.currentTimeMillis()}_$safeName"
+            )
 
-        val cipher = createCipher(
-            mode = Cipher.DECRYPT_MODE,
-            iv = iv
-        )
+        val iv =
+            Base64.decode(
+                encodedIv,
+                Base64.NO_WRAP
+            )
+
+        require(
+            iv.size == GCM_IV_LENGTH
+        ) {
+            "Invalid encryption IV"
+        }
+
+        val cipher =
+            createCipher(
+                mode = Cipher.DECRYPT_MODE,
+                iv = iv
+            )
 
         try {
 
@@ -126,7 +149,9 @@ class DocumentSecurityManager(
 
                     outputFile.outputStream().use { output ->
 
-                        decryptedInput.copyTo(output)
+                        decryptedInput.copyTo(
+                            output
+                        )
                     }
                 }
             }
@@ -145,11 +170,15 @@ class DocumentSecurityManager(
         encryptedPath: String?
     ) {
 
-        if (encryptedPath.isNullOrBlank()) {
+        if (
+            encryptedPath.isNullOrBlank()
+        ) {
             return
         }
 
-        File(encryptedPath).delete()
+        File(
+            encryptedPath
+        ).delete()
     }
 
     fun clearPreviewCache() {
@@ -157,23 +186,10 @@ class DocumentSecurityManager(
         previewDirectory
             .listFiles()
             ?.forEach { file ->
-                file.delete()
-            }
-    }
 
-    private fun clearExpiredPreviews() {
-
-        val expiry =
-            System.currentTimeMillis() - PREVIEW_RETENTION_MILLIS
-
-        previewDirectory
-            .listFiles()
-            ?.filter { file ->
-                file.isFile &&
-                    file.lastModified() < expiry
-            }
-            ?.forEach { file ->
-                file.delete()
+                if (file.isFile) {
+                    file.delete()
+                }
             }
     }
 
@@ -183,7 +199,9 @@ class DocumentSecurityManager(
     ): Cipher {
 
         return Cipher
-            .getInstance(TRANSFORMATION)
+            .getInstance(
+                TRANSFORMATION
+            )
             .apply {
 
                 init(
@@ -199,9 +217,10 @@ class DocumentSecurityManager(
 
     private fun getKey(): SecretKey {
 
-        val keyStore = KeyStore
-            .getInstance(ANDROID_KEYSTORE)
-            .apply {
+        val keyStore =
+            KeyStore.getInstance(
+                ANDROID_KEYSTORE
+            ).apply {
                 load(null)
             }
 
@@ -211,7 +230,9 @@ class DocumentSecurityManager(
                 null
             ) as? SecretKey
 
-        if (existingKey != null) {
+        if (
+            existingKey != null
+        ) {
             return existingKey
         }
 
@@ -234,11 +255,30 @@ class DocumentSecurityManager(
                         .setEncryptionPaddings(
                             KeyProperties.ENCRYPTION_PADDING_NONE
                         )
-                        .setRandomizedEncryptionRequired(false)
+                        .setRandomizedEncryptionRequired(
+                            false
+                        )
                         .build()
                 )
             }
             .generateKey()
+    }
+
+    private fun sanitizeFileName(
+        name: String
+    ): String {
+
+        return name
+            .substringAfterLast('/')
+            .substringAfterLast('\\')
+            .replace(
+                Regex("[^a-zA-Z0-9._ -]"),
+                "_"
+            )
+            .take(200)
+            .ifBlank {
+                "document"
+            }
     }
 
     data class EncryptedDocument(
@@ -262,8 +302,5 @@ class DocumentSecurityManager(
 
         const val GCM_IV_LENGTH =
             12
-
-        const val PREVIEW_RETENTION_MILLIS =
-            10 * 60 * 1000L
     }
 }
