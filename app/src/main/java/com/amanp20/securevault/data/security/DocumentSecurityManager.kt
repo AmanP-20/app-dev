@@ -299,11 +299,12 @@ class DocumentSecurityManager(
 
         const val GCM_IV_LENGTH =
             12
-}
+    }
+
     fun openDecryptedStream(
     encryptedPath: String,
     encodedIv: String
-    ): CipherInputStream {
+): CipherInputStream {
 
         val encryptedFile = File(encryptedPath)
 
@@ -311,25 +312,24 @@ class DocumentSecurityManager(
             "Encrypted file does not exist"
         }
 
-        val iv =
-            Base64.decode(
-                encodedIv,
-                Base64.NO_WRAP
-            )
+        val iv = Base64.decode(
+            encodedIv,
+            Base64.NO_WRAP
+        )
 
         require(iv.size == GCM_IV_LENGTH) {
             "Invalid encryption IV"
         }
 
-        val cipher =
-            createCipher(
-                Cipher.DECRYPT_MODE,
-                iv
-            )
+        val cipher = createCipher(
+            Cipher.DECRYPT_MODE,
+            iv
+        )
 
         return CipherInputStream(
-            encryptedFile.inputStream(
-                bufferSize = 64 * 1024
+            java.io.BufferedInputStream(
+                encryptedFile.inputStream(),
+                64 * 1024
             ),
             cipher
         )
