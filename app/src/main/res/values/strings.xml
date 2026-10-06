@@ -24,6 +24,8 @@
 
     <string name="enable_biometric">Enable biometric unlock</string>
 
+    <string name="biometric_title">Biometric Unlock</string>
+
     <string name="biometric_prompt_title">
         Unlock with fingerprint
     </string>
@@ -57,6 +59,8 @@
 
     <!-- Vault -->
     <string name="documents_title">Your Vault</string>
+
+    <string name="notes_title">Notes</string>
 
     <string name="add_file_action">
         Add files
