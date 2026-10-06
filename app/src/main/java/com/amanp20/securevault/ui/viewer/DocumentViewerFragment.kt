@@ -9,9 +9,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.amanp20.securevault.R
 import com.amanp20.securevault.databinding.FragmentDocumentViewerBinding
+import com.amanp20.securevault.utils.AppContainer
 import com.amanp20.securevault.viewmodel.SecureVaultViewModel
 import com.amanp20.securevault.viewmodel.SecureVaultViewModelFactory
-import com.amanp20.securevault.utils.AppContainer
 import java.io.File
 
 class DocumentViewerFragment :
@@ -60,41 +60,51 @@ class DocumentViewerFragment :
         binding.unsupportedView.visibility =
             View.GONE
 
-        val document =
-            AppContainer.repository
-                .getDocumentById(args.documentId)
+        viewModel.getDocumentById(
+            id = args.documentId,
 
-        if (document == null) {
-            showUnsupported()
-            return
-        }
+            onResult = { document ->
 
-        binding.toolbar.title =
-            document.originalName
-
-        viewModel.openDocument(
-            document = document,
-            onResult = { file ->
                 if (!isAdded) {
-                    file.delete()
-                    return@openDocument
+                    return@getDocumentById
                 }
 
-                decryptedFile = file
-
-                requireActivity().runOnUiThread {
-                    displayFile(
-                        file,
-                        document.mimeType
-                    )
+                if (document == null) {
+                    showUnsupported()
+                    return@getDocumentById
                 }
+
+                binding.toolbar.title =
+                    document.originalName
+
+                viewModel.openDocument(
+                    document = document,
+
+                    onResult = { file ->
+
+                        if (!isAdded) {
+                            file.delete()
+                            return@openDocument
+                        }
+
+                        decryptedFile = file
+
+                        displayFile(
+                            file,
+                            document.mimeType
+                        )
+                    },
+
+                    onError = {
+                        if (isAdded) {
+                            showUnsupported()
+                        }
+                    }
+                )
             },
-            onError = {
-                if (!isAdded) {
-                    return@openDocument
-                }
 
-                requireActivity().runOnUiThread {
+            onError = {
+                if (isAdded) {
                     showUnsupported()
                 }
             }
@@ -186,11 +196,11 @@ class DocumentViewerFragment :
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
-
         decryptedFile?.delete()
         decryptedFile = null
 
         _binding = null
+
+        super.onDestroyView()
     }
 }
