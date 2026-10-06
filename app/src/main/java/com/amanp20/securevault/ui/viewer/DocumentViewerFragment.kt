@@ -8,8 +8,8 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.amanp20.securevault.R
+import com.amanp20.securevault.SecureVaultApplication
 import com.amanp20.securevault.databinding.FragmentDocumentViewerBinding
-import com.amanp20.securevault.utils.AppContainer
 import com.amanp20.securevault.viewmodel.SecureVaultViewModel
 import com.amanp20.securevault.viewmodel.SecureVaultViewModelFactory
 import java.io.File
@@ -17,31 +17,52 @@ import java.io.File
 class DocumentViewerFragment :
     Fragment(R.layout.fragment_document_viewer) {
 
-    private var _binding: FragmentDocumentViewerBinding? = null
-    private val binding get() = _binding!!
+    private var _binding:
+        FragmentDocumentViewerBinding? = null
 
-    private val args: DocumentViewerFragmentArgs by navArgs()
+    private val binding
+        get() = _binding!!
 
-    private val viewModel: SecureVaultViewModel by viewModels {
-        SecureVaultViewModelFactory(
-            AppContainer.repository
-        )
-    }
+    private val args:
+        DocumentViewerFragmentArgs by navArgs()
 
-    private var decryptedFile: File? = null
+    private val viewModel:
+        SecureVaultViewModel by viewModels {
+
+            val application =
+                requireActivity()
+                    .application
+                        as SecureVaultApplication
+
+            SecureVaultViewModelFactory(
+                application
+                    .appContainer
+                    .secureVaultRepository
+            )
+        }
+
+    private var decryptedFile:
+        File? = null
 
     override fun onViewCreated(
         view: View,
         savedInstanceState: Bundle?
     ) {
-        super.onViewCreated(view, savedInstanceState)
+        super.onViewCreated(
+            view,
+            savedInstanceState
+        )
 
         _binding =
-            FragmentDocumentViewerBinding.bind(view)
+            FragmentDocumentViewerBinding.bind(
+                view
+            )
 
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
-        }
+        binding.toolbar
+            .setNavigationOnClickListener {
+                findNavController()
+                    .navigateUp()
+            }
 
         loadDocument()
     }
@@ -61,7 +82,7 @@ class DocumentViewerFragment :
             View.GONE
 
         viewModel.getDocumentById(
-            id = args.documentId,
+            args.documentId,
 
             onResult = { document ->
 
@@ -78,16 +99,19 @@ class DocumentViewerFragment :
                     document.originalName
 
                 viewModel.openDocument(
-                    document = document,
+                    document,
 
                     onResult = { file ->
 
                         if (!isAdded) {
+
                             file.delete()
+
                             return@openDocument
                         }
 
-                        decryptedFile = file
+                        decryptedFile =
+                            file
 
                         displayFile(
                             file,
@@ -121,13 +145,18 @@ class DocumentViewerFragment :
 
         when {
 
-            mimeType.startsWith("image/") -> {
+            mimeType.startsWith(
+                "image/"
+            ) -> {
                 displayImage(file)
             }
 
-            mimeType.startsWith("text/") ||
+            mimeType.startsWith(
+                "text/"
+            ) ||
                 mimeType == "application/json" ||
                 mimeType == "application/xml" -> {
+
                 displayText(file)
             }
 
@@ -163,18 +192,18 @@ class DocumentViewerFragment :
         file: File
     ) {
 
-        val text = try {
-            file.readText()
-        } catch (_: Exception) {
-            null
-        }
+        val text =
+            runCatching {
+                file.readText()
+            }.getOrNull()
 
         if (text == null) {
             showUnsupported()
             return
         }
 
-        binding.textViewer.text = text
+        binding.textViewer.text =
+            text
 
         binding.textScrollView.visibility =
             View.VISIBLE
@@ -196,7 +225,9 @@ class DocumentViewerFragment :
     }
 
     override fun onDestroyView() {
+
         decryptedFile?.delete()
+
         decryptedFile = null
 
         _binding = null
