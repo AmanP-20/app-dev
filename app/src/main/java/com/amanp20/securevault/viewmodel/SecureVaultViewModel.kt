@@ -1,4 +1,4 @@
-package com.amanp20.securevault.ui.viewmodel
+package com.amanp20.securevault.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.LiveData
@@ -30,20 +30,14 @@ class SecureVaultViewModel(
 
     fun importFile(
         uri: Uri,
-        onResult: (ImportResult) -> Unit,
-        onError: (Throwable) -> Unit
+        onResult: (ImportResult) -> Unit = {},
+        onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
-                val result =
-                    repository.importFile(uri)
-
+                val result = repository.importFile(uri)
                 onResult(result)
-
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -51,20 +45,14 @@ class SecureVaultViewModel(
 
     fun openDocument(
         document: SecureDocument,
-        onResult: (File) -> Unit,
-        onError: (Throwable) -> Unit
+        onResult: (File) -> Unit = {},
+        onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
-                val file =
-                    repository.openDocument(document)
-
+                val file = repository.openDocument(document)
                 onResult(file)
-
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -76,15 +64,10 @@ class SecureVaultViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 repository.deleteDocument(document)
-
                 onResult()
-
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -97,18 +80,13 @@ class SecureVaultViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 repository.renameDocument(
                     document,
                     newName
                 )
-
                 onResult()
-
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -116,19 +94,13 @@ class SecureVaultViewModel(
 
     fun verifyPin(
         pin: String,
-        onResult: (Boolean) -> Unit
+        onResult: (Boolean) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
-                val valid =
-                    repository.verifyPin(pin)
-
+                val valid = repository.verifyPin(pin)
                 onResult(valid)
-
             } catch (_: Throwable) {
-
                 onResult(false)
             }
         }
@@ -141,18 +113,13 @@ class SecureVaultViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 repository.saveNewPin(
                     pin,
                     pinLength
                 )
-
                 onResult()
-
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -166,32 +133,30 @@ class SecureVaultViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 repository.changePin(
                     currentPin,
                     newPin,
                     newPinLength
                 )
-
                 onResult()
-
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
     }
 
-    fun hasStoredPin(): Boolean =
-        repository.hasStoredPin()
+    fun hasStoredPin(): Boolean {
+        return repository.hasStoredPin()
+    }
 
-    fun getStoredPinLength(): Int =
-        repository.getStoredPinLength()
+    fun getStoredPinLength(): Int {
+        return repository.getStoredPinLength()
+    }
 
-    fun isBiometricEnabled(): Boolean =
-        repository.isBiometricEnabled()
+    fun isBiometricEnabled(): Boolean {
+        return repository.isBiometricEnabled()
+    }
 
     fun setBiometricEnabled(
         enabled: Boolean
@@ -216,7 +181,6 @@ class SecureVaultViewModelFactory(
                 SecureVaultViewModel::class.java
             )
         ) {
-
             return SecureVaultViewModel(
                 repository
             ) as T
