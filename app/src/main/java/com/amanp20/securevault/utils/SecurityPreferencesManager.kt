@@ -9,7 +9,8 @@ class SecurityPreferencesManager(
     context: Context
 ) {
 
-    private val sharedPreferences: SharedPreferences
+    private val preferences:
+        SharedPreferences
 
     init {
 
@@ -20,29 +21,33 @@ class SecurityPreferencesManager(
                 )
                 .build()
 
-        sharedPreferences =
+        preferences =
             EncryptedSharedPreferences.create(
                 context,
                 FILE_NAME,
                 masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                EncryptedSharedPreferences
+                    .PrefKeyEncryptionScheme
+                    .AES256_SIV,
+                EncryptedSharedPreferences
+                    .PrefValueEncryptionScheme
+                    .AES256_GCM
             )
     }
 
     fun hasStoredPin(): Boolean {
 
-        return sharedPreferences.contains(
+        return preferences.contains(
             KEY_PIN_HASH
         ) &&
-            sharedPreferences.contains(
+            preferences.contains(
                 KEY_PIN_SALT
             )
     }
 
     fun getStoredPinLength(): Int {
 
-        return sharedPreferences.getInt(
+        return preferences.getInt(
             KEY_PIN_LENGTH,
             0
         )
@@ -53,10 +58,6 @@ class SecurityPreferencesManager(
         pinLength: Int
     ) {
 
-        require(pin.isNotBlank()) {
-            "PIN cannot be empty"
-        }
-
         val salt =
             PinHasher.generateSalt()
 
@@ -66,7 +67,7 @@ class SecurityPreferencesManager(
                 salt
             )
 
-        sharedPreferences
+        preferences
             .edit()
             .putString(
                 KEY_PIN_HASH,
@@ -91,30 +92,28 @@ class SecurityPreferencesManager(
         pin: String
     ): Boolean {
 
-        val storedSalt =
-            sharedPreferences.getString(
+        val salt =
+            preferences.getString(
                 KEY_PIN_SALT,
                 null
-            )
-                ?: return false
+            ) ?: return false
 
-        val storedHash =
-            sharedPreferences.getString(
+        val hash =
+            preferences.getString(
                 KEY_PIN_HASH,
                 null
-            )
-                ?: return false
+            ) ?: return false
 
         return PinHasher.verifyPin(
             pin,
-            storedSalt,
-            storedHash
+            salt,
+            hash
         )
     }
 
     fun isBiometricEnabled(): Boolean {
 
-        return sharedPreferences.getBoolean(
+        return preferences.getBoolean(
             KEY_BIOMETRIC_ENABLED,
             false
         )
@@ -131,20 +130,12 @@ class SecurityPreferencesManager(
             return
         }
 
-        sharedPreferences
+        preferences
             .edit()
             .putBoolean(
                 KEY_BIOMETRIC_ENABLED,
                 enabled
             )
-            .apply()
-    }
-
-    fun clearAuthentication() {
-
-        sharedPreferences
-            .edit()
-            .clear()
             .apply()
     }
 
