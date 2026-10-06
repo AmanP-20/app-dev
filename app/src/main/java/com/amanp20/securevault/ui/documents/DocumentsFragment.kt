@@ -1,5 +1,6 @@
 package com.amanp20.securevault.ui.documents
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -26,7 +27,8 @@ import com.amanp20.securevault.ui.common.BaseBindingFragment
 import com.amanp20.securevault.viewmodel.SecureVaultViewModel
 import com.amanp20.securevault.viewmodel.SecureVaultViewModelFactory
 
-class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
+class DocumentsFragment :
+    BaseBindingFragment<FragmentDocumentsBinding>() {
 
     private lateinit var adapter: DocumentAdapter
 
@@ -48,7 +50,6 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
             }
 
             uris.forEach { uri ->
-
                 importFile(uri)
             }
         }
@@ -69,27 +70,21 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
         view: View,
         savedInstanceState: Bundle?
     ) {
-
         super.onViewCreated(
             view,
             savedInstanceState
         )
 
         setupToolbar()
-
         setupMenu()
-
         setupRecyclerView()
-
         setupFilePicker()
-
         observeDocuments()
     }
 
     private fun setupToolbar() {
 
         binding.toolbar.setNavigationOnClickListener {
-
             findNavController().navigateUp()
         }
     }
@@ -115,7 +110,8 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
                         )
 
                     val searchView =
-                        searchItem.actionView as? SearchView
+                        searchItem.actionView
+                            as? SearchView
                             ?: return
 
                     searchView.queryHint =
@@ -130,7 +126,6 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
                             override fun onQueryTextSubmit(
                                 query: String?
                             ): Boolean {
-
                                 return true
                             }
 
@@ -155,16 +150,12 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
                     return when (item.itemId) {
 
                         R.id.action_sort -> {
-
                             showSortDialog()
-
                             true
                         }
 
                         R.id.action_filter -> {
-
                             showFilterDialog()
-
                             true
                         }
 
@@ -236,11 +227,10 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
 
                 allDocuments.filter {
 
-                    it.originalName
-                        .contains(
-                            query,
-                            ignoreCase = true
-                        )
+                    it.originalName.contains(
+                        query,
+                        ignoreCase = true
+                    )
                 }
             }
 
@@ -273,7 +263,7 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     }
 
     private fun importFile(
-        uri: android.net.Uri
+        uri: Uri
     ) {
 
         viewModel.importFile(
@@ -284,14 +274,12 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
                 when (result) {
 
                     ImportResult.Added -> {
-
                         showMessage(
                             "File encrypted and added"
                         )
                     }
 
                     ImportResult.Duplicate -> {
-
                         showMessage(
                             "A file with this name already exists"
                         )
@@ -313,26 +301,14 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
         document: SecureDocument
     ) {
 
-        viewModel.openDocument(
-            document = document,
-
-            onResult = { file ->
-
-                showMessage(
-                    "File decrypted for viewing"
+        val action =
+            DocumentsFragmentDirections
+                .actionDocumentsFragmentToDocumentViewerFragment(
+                    document.id
                 )
 
-                // The internal viewer will be connected
-                // in a later block.
-            },
-
-            onError = { error ->
-
-                showMessage(
-                    error.message
-                        ?: "Unable to open file"
-                )
-            }
+        findNavController().navigate(
+            action
         )
     }
 
@@ -341,13 +317,9 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
     ) {
 
         val options = arrayOf(
-            getString(
-                R.string.open_action
-            ),
+            getString(R.string.open_action),
             "Rename",
-            getString(
-                R.string.delete_action
-            )
+            getString(R.string.delete_action)
         )
 
         MaterialAlertDialogBuilder(
@@ -418,14 +390,12 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
                     newName,
 
                     onResult = {
-
                         showMessage(
                             "File renamed"
                         )
                     },
 
                     onError = { error ->
-
                         showMessage(
                             error.message
                                 ?: "Unable to rename file"
@@ -459,14 +429,12 @@ class DocumentsFragment : BaseBindingFragment<FragmentDocumentsBinding>() {
                     document,
 
                     onResult = {
-
                         showMessage(
                             "File deleted"
                         )
                     },
 
                     onError = { error ->
-
                         showMessage(
                             error.message
                                 ?: "Unable to delete file"
