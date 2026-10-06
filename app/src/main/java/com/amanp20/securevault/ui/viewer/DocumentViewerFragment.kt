@@ -5,6 +5,10 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.amanp20.securevault.R
@@ -44,6 +48,9 @@ class DocumentViewerFragment :
     private var decryptedFile:
         File? = null
 
+    private var player:
+        ExoPlayer? = null
+
     override fun onViewCreated(
         view: View,
         savedInstanceState: Bundle?
@@ -69,24 +76,14 @@ class DocumentViewerFragment :
 
     private fun loadDocument() {
 
-        binding.loadingProgress.visibility =
-            View.VISIBLE
-
-        binding.imageViewer.visibility =
-            View.GONE
-
-        binding.textScrollView.visibility =
-            View.GONE
-
-        binding.unsupportedView.visibility =
-            View.GONE
+        showLoading()
 
         viewModel.getDocumentById(
             args.documentId,
 
             onResult = { document ->
 
-                if (!isAdded) {
+                if (!isAdded || _binding == null) {
                     return@getDocumentById
                 }
 
@@ -103,7 +100,7 @@ class DocumentViewerFragment :
 
                     onResult = { file ->
 
-                        if (!isAdded) {
+                        if (!isAdded || _binding == null) {
 
                             file.delete()
 
@@ -120,7 +117,11 @@ class DocumentViewerFragment :
                     },
 
                     onError = {
-                        if (isAdded) {
+
+                        if (
+                            isAdded &&
+                            _binding != null
+                        ) {
                             showUnsupported()
                         }
                     }
@@ -128,7 +129,11 @@ class DocumentViewerFragment :
             },
 
             onError = {
-                if (isAdded) {
+
+                if (
+                    isAdded &&
+                    _binding != null
+                ) {
                     showUnsupported()
                 }
             }
@@ -140,23 +145,39 @@ class DocumentViewerFragment :
         mimeType: String
     ) {
 
-        binding.loadingProgress.visibility =
-            View.GONE
+        if (!isAdded || _binding == null) {
+            file.delete()
+            return
+        }
 
         when {
 
             mimeType.startsWith(
-                "image/"
+                "image/",
+                ignoreCase = true
             ) -> {
                 displayImage(file)
             }
 
             mimeType.startsWith(
-                "text/"
-            ) ||
-                mimeType == "application/json" ||
-                mimeType == "application/xml" -> {
+                "video/",
+                ignoreCase = true
+            ) -> {
+                displayVideo(file)
+            }
 
+            mimeType.startsWith(
+                "text/",
+                ignoreCase = true
+            ) ||
+                mimeType.equals(
+                    "application/json",
+                    ignoreCase = true
+                ) ||
+                mimeType.equals(
+                    "application/xml",
+                    ignoreCase = true
+                ) -> {
                 displayText(file)
             }
 
@@ -170,27 +191,117 @@ class DocumentViewerFragment :
         file: File
     ) {
 
+        binding.loadingProgress.visibility =
+            View.GONE
+
+        binding.imageViewer.visibility =
+            View.VISIBLE
+
+        binding.videoViewer.visibility =
+            View.GONE
+
+        binding.textScrollView.visibility =
+            View.GONE
+
+        binding.unsupportedView.visibility =
+            View.GONE
+
         val bitmap =
-            BitmapFactory.decodeFile(
-                file.absolutePath
-            )
+            runCatching {
+                BitmapFactory.decodeFile(
+                    file.absolutePath
+                )
+            }.getOrNull()
 
         if (bitmap == null) {
+
             showUnsupported()
+
             return
         }
 
         binding.imageViewer.setImageBitmap(
             bitmap
         )
+    }
+
+    private fun displayVideo(
+        file: File
+    ) {
+
+        binding.loadingProgress.visibility =
+            View.GONE
 
         binding.imageViewer.visibility =
+            View.GONE
+
+        binding.videoViewer.visibility =
             View.VISIBLE
+
+        binding.textScrollView.visibility =
+            View.GONE
+
+        binding.unsupportedView.visibility =
+            View.GONE
+
+        releasePlayer()
+
+        val exoPlayer =
+            ExoPlayer.Builder(
+                requireContext()
+            ).build()
+
+        player =
+            exoPlayer
+
+        binding.videoViewer.player =
+            exoPlayer
+
+        exoPlayer.addListener(
+            object : Player.Listener {
+
+                override fun onPlayerError(
+                    error: PlaybackException
+                ) {
+                    if (
+                        isAdded &&
+                        _binding != null
+                    ) {
+                        showUnsupported()
+                    }
+                }
+            }
+        )
+
+        exoPlayer.setMediaItem(
+            MediaItem.fromUri(
+                android.net.Uri.fromFile(file)
+            )
+        )
+
+        exoPlayer.prepare()
+
+        exoPlayer.playWhenReady = true
     }
 
     private fun displayText(
         file: File
     ) {
+
+        binding.loadingProgress.visibility =
+            View.GONE
+
+        binding.imageViewer.visibility =
+            View.GONE
+
+        binding.videoViewer.visibility =
+            View.GONE
+
+        binding.textScrollView.visibility =
+            View.VISIBLE
+
+        binding.unsupportedView.visibility =
+            View.GONE
 
         val text =
             runCatching {
@@ -198,23 +309,45 @@ class DocumentViewerFragment :
             }.getOrNull()
 
         if (text == null) {
+
             showUnsupported()
+
             return
         }
 
         binding.textViewer.text =
             text
+    }
+
+    private fun showLoading() {
+
+        binding.loadingProgress.visibility =
+            View.VISIBLE
+
+        binding.imageViewer.visibility =
+            View.GONE
+
+        binding.videoViewer.visibility =
+            View.GONE
 
         binding.textScrollView.visibility =
-            View.VISIBLE
+            View.GONE
+
+        binding.unsupportedView.visibility =
+            View.GONE
     }
 
     private fun showUnsupported() {
+
+        releasePlayer()
 
         binding.loadingProgress.visibility =
             View.GONE
 
         binding.imageViewer.visibility =
+            View.GONE
+
+        binding.videoViewer.visibility =
             View.GONE
 
         binding.textScrollView.visibility =
@@ -224,7 +357,38 @@ class DocumentViewerFragment :
             View.VISIBLE
     }
 
+    private fun releasePlayer() {
+
+        player?.let { exoPlayer ->
+
+            binding.videoViewer.player =
+                null
+
+            exoPlayer.stop()
+            exoPlayer.release()
+        }
+
+        player = null
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        /*
+         * Pause video when the viewer is no longer visible.
+         * The decrypted temporary file remains until the
+         * viewer itself is destroyed.
+         */
+        player?.playWhenReady = false
+    }
+
     override fun onDestroyView() {
+
+        releasePlayer()
+
+        binding.imageViewer.setImageDrawable(
+            null
+        )
 
         decryptedFile?.delete()
 
