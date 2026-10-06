@@ -25,9 +25,7 @@ object PinHasher {
         val salt =
             ByteArray(SALT_LENGTH)
 
-        SecureRandom().nextBytes(
-            salt
-        )
+        SecureRandom().nextBytes(salt)
 
         return Base64.encodeToString(
             salt,
@@ -40,9 +38,7 @@ object PinHasher {
         saltBase64: String
     ): String {
 
-        require(pin.isNotEmpty()) {
-            "PIN cannot be empty"
-        }
+        require(pin.isNotEmpty())
 
         val salt =
             Base64.decode(
@@ -52,9 +48,7 @@ object PinHasher {
 
         require(
             salt.size == SALT_LENGTH
-        ) {
-            "Invalid PIN salt"
-        }
+        )
 
         val spec =
             PBEKeySpec(
@@ -66,13 +60,9 @@ object PinHasher {
 
         return try {
 
-            val factory =
-                SecretKeyFactory.getInstance(
-                    ALGORITHM
-                )
-
             Base64.encodeToString(
-                factory
+                SecretKeyFactory
+                    .getInstance(ALGORITHM)
                     .generateSecret(spec)
                     .encoded,
                 Base64.NO_WRAP
@@ -100,7 +90,7 @@ object PinHasher {
 
         return try {
 
-            val actualHash =
+            val actual =
                 Base64.decode(
                     hashPin(
                         pin,
@@ -109,19 +99,20 @@ object PinHasher {
                     Base64.NO_WRAP
                 )
 
-            val storedHash =
+            val expected =
                 Base64.decode(
                     expectedHash,
                     Base64.NO_WRAP
                 )
 
             MessageDigest.isEqual(
-                actualHash,
-                storedHash
+                actual,
+                expected
             )
 
-        } catch (_: IllegalArgumentException) {
-
+        } catch (
+            _: IllegalArgumentException
+        ) {
             false
         }
     }
