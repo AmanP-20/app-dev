@@ -1,6 +1,7 @@
 package com.amanp20.securevault.ui.viewer
 
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
@@ -9,10 +10,16 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.TransferListener
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.amanp20.securevault.R
 import com.amanp20.securevault.SecureVaultApplication
+import com.amanp20.securevault.data.model.SecureDocument
+import com.amanp20.securevault.data.security.EncryptedDataSource
 import com.amanp20.securevault.databinding.FragmentDocumentViewerBinding
 import com.amanp20.securevault.viewmodel.SecureVaultViewModel
 import com.amanp20.securevault.viewmodel.SecureVaultViewModelFactory
@@ -21,55 +28,35 @@ import java.io.File
 class DocumentViewerFragment :
     Fragment(R.layout.fragment_document_viewer) {
 
-    private var _binding:
-        FragmentDocumentViewerBinding? = null
+    private var _binding: FragmentDocumentViewerBinding? = null
+    private val binding get() = requireNotNull(_binding)
 
-    private val binding
-        get() = _binding!!
+    private val args: DocumentViewerFragmentArgs by navArgs()
 
-    private val args:
-        DocumentViewerFragmentArgs by navArgs()
+    private val viewModel: SecureVaultViewModel by viewModels {
+        val application =
+            requireActivity().application as SecureVaultApplication
 
-    private val viewModel:
-        SecureVaultViewModel by viewModels {
+        SecureVaultViewModelFactory(
+            application.appContainer.secureVaultRepository
+        )
+    }
 
-            val application =
-                requireActivity()
-                    .application
-                        as SecureVaultApplication
-
-            SecureVaultViewModelFactory(
-                application
-                    .appContainer
-                    .secureVaultRepository
-            )
-        }
-
-    private var decryptedFile:
-        File? = null
-
-    private var player:
-        ExoPlayer? = null
+    private var decryptedFile: File? = null
+    private var player: ExoPlayer? = null
 
     override fun onViewCreated(
         view: View,
         savedInstanceState: Bundle?
     ) {
-        super.onViewCreated(
-            view,
-            savedInstanceState
-        )
+        super.onViewCreated(view, savedInstanceState)
 
         _binding =
-            FragmentDocumentViewerBinding.bind(
-                view
-            )
+            FragmentDocumentViewerBinding.bind(view)
 
-        binding.toolbar
-            .setNavigationOnClickListener {
-                findNavController()
-                    .navigateUp()
-            }
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
 
         loadDocument()
     }
@@ -95,20 +82,27 @@ class DocumentViewerFragment :
                 binding.toolbar.title =
                     document.originalName
 
+                if (
+                    document.mimeType.startsWith(
+                        "video/",
+                        ignoreCase = true
+                    )
+                ) {
+                    displayVideo(document)
+                    return@getDocumentById
+                }
+
                 viewModel.openDocument(
                     document,
 
                     onResult = { file ->
 
                         if (!isAdded || _binding == null) {
-
                             file.delete()
-
                             return@openDocument
                         }
 
-                        decryptedFile =
-                            file
+                        decryptedFile = file
 
                         displayFile(
                             file,
@@ -140,6 +134,124 @@ class DocumentViewerFragment :
         )
     }
 
+    private fun displayVideo(
+        document: SecureDocument
+    ) {
+
+        binding.loadingProgress.visibility =
+            View.GONE
+
+        binding.imageViewer.visibility =
+            View.GONE
+
+        binding.videoViewer.visibility =
+            View.VISIBLE
+
+        binding.textScrollView.visibility =
+            View.GONE
+
+        binding.unsupportedView.visibility =
+            View.GONE
+
+        releasePlayer()
+
+        val dataSourceFactory =
+            EncryptedDataSource.Factory(
+                securityManager =
+                    (requireActivity().application
+                        as SecureVaultApplication)
+                        .appContainer
+                        .secureVaultRepository
+                        .let {
+                            val field =
+                                it.javaClass
+                                    .getDeclaredField(
+                                        "securityManager"
+                                    )
+
+                            field.isAccessible = true
+
+                            field.get(it)
+                                as com.amanp20.securevault.data.security.DocumentSecurityManager
+                        },
+
+                encryptedPath =
+                    document.encryptedFilePath,
+
+                encodedIv =
+                    document.encryptionIv
+            )
+
+        val mediaSourceFactory =
+            DefaultMediaSourceFactory(
+                dataSourceFactory
+            )
+
+        val exoPlayer =
+            ExoPlayer.Builder(
+                requireContext()
+            )
+                .setMediaSourceFactory(
+                    mediaSourceFactory
+                )
+                .build()
+
+        player = exoPlayer
+
+        binding.videoViewer.player =
+            exoPlayer
+
+        exoPlayer.addListener(
+            object : Player.Listener {
+
+                override fun onPlaybackStateChanged(
+                    playbackState: Int
+                ) {
+
+                    binding.loadingProgress.visibility =
+                        when (playbackState) {
+
+                            Player.STATE_BUFFERING ->
+                                View.VISIBLE
+
+                            else ->
+                                View.GONE
+                        }
+                }
+
+                override fun onPlayerError(
+                    error: PlaybackException
+                ) {
+                    if (
+                        isAdded &&
+                        _binding != null
+                    ) {
+                        showUnsupported()
+                    }
+                }
+            }
+        )
+
+        val mediaItem =
+            MediaItem.Builder()
+                .setUri(
+                    Uri.parse(
+                        "securevault://${document.id}"
+                    )
+                )
+                .setMimeType(
+                    document.mimeType
+                )
+                .build()
+
+        exoPlayer.setMediaItem(
+            mediaItem
+        )
+
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = true
+    }
+
     private fun displayFile(
         file: File,
         mimeType: String
@@ -157,13 +269,6 @@ class DocumentViewerFragment :
                 ignoreCase = true
             ) -> {
                 displayImage(file)
-            }
-
-            mimeType.startsWith(
-                "video/",
-                ignoreCase = true
-            ) -> {
-                displayVideo(file)
             }
 
             mimeType.startsWith(
@@ -214,74 +319,11 @@ class DocumentViewerFragment :
             }.getOrNull()
 
         if (bitmap == null) {
-
             showUnsupported()
-
             return
         }
 
-        binding.imageViewer.setImageBitmap(
-            bitmap
-        )
-    }
-
-    private fun displayVideo(
-        file: File
-    ) {
-
-        binding.loadingProgress.visibility =
-            View.GONE
-
-        binding.imageViewer.visibility =
-            View.GONE
-
-        binding.videoViewer.visibility =
-            View.VISIBLE
-
-        binding.textScrollView.visibility =
-            View.GONE
-
-        binding.unsupportedView.visibility =
-            View.GONE
-
-        releasePlayer()
-
-        val exoPlayer =
-            ExoPlayer.Builder(
-                requireContext()
-            ).build()
-
-        player =
-            exoPlayer
-
-        binding.videoViewer.player =
-            exoPlayer
-
-        exoPlayer.addListener(
-            object : Player.Listener {
-
-                override fun onPlayerError(
-                    error: PlaybackException
-                ) {
-                    if (
-                        isAdded &&
-                        _binding != null
-                    ) {
-                        showUnsupported()
-                    }
-                }
-            }
-        )
-
-        exoPlayer.setMediaItem(
-            MediaItem.fromUri(
-                android.net.Uri.fromFile(file)
-            )
-        )
-
-        exoPlayer.prepare()
-
-        exoPlayer.playWhenReady = true
+        binding.imageViewer.setImageBitmap(bitmap)
     }
 
     private fun displayText(
@@ -309,9 +351,7 @@ class DocumentViewerFragment :
             }.getOrNull()
 
         if (text == null) {
-
             showUnsupported()
-
             return
         }
 
@@ -341,6 +381,10 @@ class DocumentViewerFragment :
 
         releasePlayer()
 
+        if (_binding == null) {
+            return
+        }
+
         binding.loadingProgress.visibility =
             View.GONE
 
@@ -359,39 +403,27 @@ class DocumentViewerFragment :
 
     private fun releasePlayer() {
 
-        player?.let { exoPlayer ->
-
-            binding.videoViewer.player =
-                null
-
-            exoPlayer.stop()
-            exoPlayer.release()
+        player?.let {
+            binding.videoViewer.player = null
+            it.stop()
+            it.release()
         }
 
         player = null
     }
 
     override fun onStop() {
-        super.onStop()
-
-        /*
-         * Pause video when the viewer is no longer visible.
-         * The decrypted temporary file remains until the
-         * viewer itself is destroyed.
-         */
         player?.playWhenReady = false
+        super.onStop()
     }
 
     override fun onDestroyView() {
 
         releasePlayer()
 
-        binding.imageViewer.setImageDrawable(
-            null
-        )
+        binding.imageViewer.setImageDrawable(null)
 
         decryptedFile?.delete()
-
         decryptedFile = null
 
         _binding = null
