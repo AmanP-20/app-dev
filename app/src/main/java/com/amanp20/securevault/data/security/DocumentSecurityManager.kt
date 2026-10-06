@@ -56,8 +56,8 @@ class DocumentSecurityManager(
 
         val cipher =
             createCipher(
-                mode = Cipher.ENCRYPT_MODE,
-                iv = iv
+                Cipher.ENCRYPT_MODE,
+                iv
             )
 
         try {
@@ -111,13 +111,12 @@ class DocumentSecurityManager(
 
         clearPreviewCache()
 
-        val safeName =
-            sanitizeFileName(outputName)
-
         val outputFile =
             File(
                 previewDirectory,
-                "${System.currentTimeMillis()}_$safeName"
+                "${System.currentTimeMillis()}_${
+                    sanitizeFileName(outputName)
+                }"
             )
 
         val iv =
@@ -134,8 +133,8 @@ class DocumentSecurityManager(
 
         val cipher =
             createCipher(
-                mode = Cipher.DECRYPT_MODE,
-                iv = iv
+                Cipher.DECRYPT_MODE,
+                iv
             )
 
         try {
@@ -230,9 +229,7 @@ class DocumentSecurityManager(
                 null
             ) as? SecretKey
 
-        if (
-            existingKey != null
-        ) {
+        if (existingKey != null) {
             return existingKey
         }
 
