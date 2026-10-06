@@ -235,4 +235,20 @@
 
     </string-array>
 
+    <string name="document_preview">Document preview</string>
+    <string name="search_documents_hint">Search files</string>
+    <string name="open_action">Open</string>
+    <string name="delete_action">Delete</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="save_action">Save</string>
+    <string name="home_title">Home</string>
+    <string name="documents_title">Documents</string>
+    <string name="settings_title">Settings</string>
+    <string name="create_pin_title">Create PIN</string>
+    <string name="lock_title">Unlock</string>
+    <string name="change_pin_title">Change PIN</string>
+    <string name="splash_title">SecureVault</string>
+    <string name="error_database_initialization_failed">Unable to initialize the secure database</string>
+    <string name="error_wrong_pin">Incorrect PIN</string>
+
 </resources>
