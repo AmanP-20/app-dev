@@ -43,6 +43,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/videoViewer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/black"
+        android:visibility="gone"
+        app:show_buffering="when_playing"
+        app:show_shuffle_button="false"
+        app:show_subtitle_button="false"
+        app:use_controller="true"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <android.widget.ScrollView
         android:id="@+id/textScrollView"
         android:layout_width="0dp"
