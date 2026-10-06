@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <resources>
 
     <!-- App -->
-
     <string name="app_name">SecureVault</string>
 
     <!-- Splash -->
-
     <string name="splash_title">SecureVault</string>
 
     <!-- Authentication -->
-
     <string name="create_pin_title">Create PIN</string>
     <string name="lock_title">SecureVault Locked</string>
 
@@ -37,7 +33,6 @@
     </string>
 
     <!-- Home -->
-
     <string name="home_title">Home</string>
 
     <string name="greeting_morning">
@@ -61,7 +56,6 @@
     </string>
 
     <!-- Vault -->
-
     <string name="documents_title">Your Vault</string>
 
     <string name="add_file_action">
@@ -97,7 +91,6 @@
     </string>
 
     <!-- File -->
-
     <string name="document_details">
         %1$s • %2$s
     </string>
@@ -108,6 +101,10 @@
 
     <string name="locked_document">
         Encrypted file
+    </string>
+
+    <string name="document_preview">
+        Document preview
     </string>
 
     <string name="open_action">
@@ -131,7 +128,6 @@
     </string>
 
     <!-- General -->
-
     <string name="cancel_action">
         Cancel
     </string>
@@ -157,7 +153,6 @@
     </string>
 
     <!-- Errors -->
-
     <string name="error_pin_required">
         PIN is required.
     </string>
@@ -195,7 +190,6 @@
     </string>
 
     <!-- PIN -->
-
     <string name="pin_length_4">
         4 digits
     </string>
@@ -210,45 +204,23 @@
     </string-array>
 
     <!-- File sorting -->
-
     <string-array name="document_sort_options">
-
         <item>Name: A → Z</item>
         <item>Name: Z → A</item>
         <item>Newest first</item>
         <item>Oldest first</item>
         <item>Largest first</item>
         <item>Smallest first</item>
-
     </string-array>
 
     <!-- File categories -->
-
     <string-array name="document_categories">
-
         <item>All</item>
         <item>Images</item>
         <item>Videos</item>
         <item>Audio</item>
         <item>Documents</item>
         <item>Other</item>
-
     </string-array>
-
-    <string name="document_preview">Document preview</string>
-    <string name="search_documents_hint">Search files</string>
-    <string name="open_action">Open</string>
-    <string name="delete_action">Delete</string>
-    <string name="cancel_action">Cancel</string>
-    <string name="save_action">Save</string>
-    <string name="home_title">Home</string>
-    <string name="documents_title">Documents</string>
-    <string name="settings_title">Settings</string>
-    <string name="create_pin_title">Create PIN</string>
-    <string name="lock_title">Unlock</string>
-    <string name="change_pin_title">Change PIN</string>
-    <string name="splash_title">SecureVault</string>
-    <string name="error_database_initialization_failed">Unable to initialize the secure database</string>
-    <string name="error_wrong_pin">Incorrect PIN</string>
 
 </resources>
