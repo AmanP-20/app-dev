@@ -191,21 +191,20 @@ class SecureVaultRepositoryImpl(
                 throw error
             }
 
-        val document =
-            SecureDocument(
-                originalName = originalName,
-                encryptedFilePath = encrypted.path,
-                encryptionIv = encrypted.iv,
-                mimeType = metadata.mimeType,
-                fileSize = metadata.size,
-                category = metadata.category,
-                dateAdded = System.currentTimeMillis(),
-                lastModified = metadata.lastModified
-            )
-
         try {
 
-            dao.insert(document)
+            dao.insert(
+                SecureDocument(
+                    originalName = originalName,
+                    encryptedFilePath = encrypted.path,
+                    encryptionIv = encrypted.iv,
+                    mimeType = metadata.mimeType,
+                    fileSize = metadata.size,
+                    category = metadata.category,
+                    dateAdded = System.currentTimeMillis(),
+                    lastModified = metadata.lastModified
+                )
+            )
 
             ImportResult.Added
 
@@ -217,6 +216,13 @@ class SecureVaultRepositoryImpl(
 
             throw error
         }
+    }
+
+    override suspend fun getDocumentById(
+        id: Long
+    ): SecureDocument? = withContext(Dispatchers.IO) {
+
+        requireDao().getById(id)
     }
 
     override suspend fun openDocument(
@@ -263,9 +269,8 @@ class SecureVaultRepositoryImpl(
         }
 
         require(
-            !requireDao().existsByName(
-                cleanedName
-            )
+            cleanedName == document.originalName ||
+                !requireDao().existsByName(cleanedName)
         ) {
             "A file with this name already exists"
         }
