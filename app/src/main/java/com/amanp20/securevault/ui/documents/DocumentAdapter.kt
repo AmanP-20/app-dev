@@ -42,12 +42,12 @@ class DocumentAdapter(
         private val binding: ItemDocumentBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(
-            document: SecureDocument
-        ) {
+        fun bind(document: SecureDocument) {
 
-            binding.nameText.text =
-                document.originalName
+            binding.nameText.text = document.originalName
+
+            binding.fileIconText.text =
+                getFileTypeLabel(document)
 
             binding.detailsText.text =
                 binding.root.context.getString(
@@ -60,16 +60,11 @@ class DocumentAdapter(
                 binding.root.context.getString(
                     R.string.document_added,
                     DateFormat
-                        .getDateInstance(
-                            DateFormat.MEDIUM
-                        )
-                        .format(
-                            Date(document.dateAdded)
-                        )
+                        .getDateInstance(DateFormat.MEDIUM)
+                        .format(Date(document.dateAdded))
                 )
 
-            binding.lockIcon.visibility =
-                View.VISIBLE
+            binding.lockIcon.visibility = View.VISIBLE
 
             binding.root.setOnClickListener {
                 onClick(document)
@@ -80,46 +75,85 @@ class DocumentAdapter(
             }
         }
 
+        private fun getFileTypeLabel(
+            document: SecureDocument
+        ): String {
+
+            val mimeType =
+                document.mimeType.lowercase()
+
+            return when {
+
+                mimeType == "application/pdf" ->
+                    "PDF"
+
+                mimeType.startsWith("image/") ->
+                    "IMG"
+
+                mimeType.startsWith("video/") ->
+                    "VID"
+
+                mimeType.startsWith("audio/") ->
+                    "AUD"
+
+                mimeType.contains("word") ||
+                    mimeType.contains("document") ->
+                    "DOC"
+
+                mimeType.contains("spreadsheet") ||
+                    mimeType.contains("excel") ->
+                    "XLS"
+
+                mimeType.contains("presentation") ||
+                    mimeType.contains("powerpoint") ->
+                    "PPT"
+
+                mimeType.contains("zip") ||
+                    mimeType.contains("compressed") ->
+                    "ZIP"
+
+                else ->
+                    "FILE"
+            }
+        }
+
         private fun formatSize(
             bytes: Long
         ): String {
 
-            return when {
-
-                bytes < 1024 ->
-                    "$bytes B"
-
-                bytes < 1024 * 1024 ->
-                    "${bytes / 1024} KB"
-
-                bytes < 1024 * 1024 * 1024 ->
-                    String.format(
-                        "%.1f MB",
-                        bytes / (1024f * 1024f)
-                    )
-
-                else ->
-                    String.format(
-                        "%.1f GB",
-                        bytes / (1024f * 1024f * 1024f)
-                    )
+            if (bytes < 1024) {
+                return "$bytes B"
             }
+
+            if (bytes < 1024 * 1024) {
+                return "${bytes / 1024} KB"
+            }
+
+            if (bytes < 1024L * 1024L * 1024L) {
+                return String.format(
+                    "%.1f MB",
+                    bytes / (1024f * 1024f)
+                )
+            }
+
+            return String.format(
+                "%.1f GB",
+                bytes / (1024f * 1024f * 1024f)
+            )
         }
     }
 
     companion object {
 
         private val DIFF =
-            object :
-                DiffUtil.ItemCallback<SecureDocument>() {
+            object : DiffUtil.ItemCallback<SecureDocument>() {
 
                 override fun areItemsTheSame(
                     oldItem: SecureDocument,
                     newItem: SecureDocument
                 ): Boolean {
 
-                    return oldItem.id ==
-                        newItem.id
+                    return oldItem.id == newItem.id
                 }
 
                 override fun areContentsTheSame(
@@ -127,8 +161,7 @@ class DocumentAdapter(
                     newItem: SecureDocument
                 ): Boolean {
 
-                    return oldItem ==
-                        newItem
+                    return oldItem == newItem
                 }
             }
     }
