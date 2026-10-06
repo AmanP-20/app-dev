@@ -45,6 +45,10 @@ interface SecureVaultRepository {
         uri: Uri
     ): ImportResult
 
+    suspend fun getDocumentById(
+        id: Long
+    ): SecureDocument?
+
     suspend fun openDocument(
         document: SecureDocument
     ): File
