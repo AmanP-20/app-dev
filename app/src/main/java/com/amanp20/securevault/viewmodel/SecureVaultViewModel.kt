@@ -5,26 +5,27 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.amanp20.securevault.data.model.DatabaseStatus
 import com.amanp20.securevault.data.model.SecureDocument
 import com.amanp20.securevault.data.repository.ImportResult
 import com.amanp20.securevault.data.repository.SecureVaultRepository
 import kotlinx.coroutines.launch
 import java.io.File
 
-class SecureDocumentViewModel(
+class SecureVaultViewModel(
     private val repository: SecureVaultRepository
 ) : ViewModel() {
 
-    val documents:
-        LiveData<List<SecureDocument>>
+    val databaseStatus: LiveData<DatabaseStatus>
+        get() = repository.databaseStatus
+
+    val documents: LiveData<List<SecureDocument>>
         get() = repository.documents
 
-    val documentCount:
-        LiveData<Int>
+    val documentCount: LiveData<Int>
         get() = repository.documentCount
 
-    val totalStorageUsed:
-        LiveData<Long>
+    val totalStorageUsed: LiveData<Long>
         get() = repository.totalStorageUsed
 
     fun importFile(
@@ -33,16 +34,13 @@ class SecureDocumentViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 val result =
                     repository.importFile(uri)
 
                 onResult(result)
 
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -54,16 +52,13 @@ class SecureDocumentViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 val document =
                     repository.getDocumentById(id)
 
                 onResult(document)
 
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -75,18 +70,13 @@ class SecureDocumentViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 val file =
-                    repository.openDocument(
-                        document
-                    )
+                    repository.openDocument(document)
 
                 onResult(file)
 
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -98,17 +88,11 @@ class SecureDocumentViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
-                repository.deleteDocument(
-                    document
-                )
-
+                repository.deleteDocument(document)
                 onResult()
 
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
@@ -121,9 +105,7 @@ class SecureDocumentViewModel(
         onError: (Throwable) -> Unit = {}
     ) {
         viewModelScope.launch {
-
             try {
-
                 repository.renameDocument(
                     document,
                     newName
@@ -132,14 +114,93 @@ class SecureDocumentViewModel(
                 onResult()
 
             } catch (error: Throwable) {
-
                 onError(error)
             }
         }
     }
+
+    fun verifyPin(
+        pin: String,
+        onResult: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val valid =
+                    repository.verifyPin(pin)
+
+                onResult(valid)
+
+            } catch (_: Throwable) {
+                onResult(false)
+            }
+        }
+    }
+
+    fun saveNewPin(
+        pin: String,
+        pinLength: Int,
+        onResult: () -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.saveNewPin(
+                    pin,
+                    pinLength
+                )
+
+                onResult()
+
+            } catch (error: Throwable) {
+                onError(error)
+            }
+        }
+    }
+
+    fun changePin(
+        currentPin: String,
+        newPin: String,
+        newPinLength: Int,
+        onResult: () -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.changePin(
+                    currentPin,
+                    newPin,
+                    newPinLength
+                )
+
+                onResult()
+
+            } catch (error: Throwable) {
+                onError(error)
+            }
+        }
+    }
+
+    fun hasStoredPin(): Boolean =
+        repository.hasStoredPin()
+
+    fun getStoredPinLength(): Int =
+        repository.getStoredPinLength()
+
+    fun isBiometricEnabled(): Boolean =
+        repository.isBiometricEnabled()
+
+    fun setBiometricEnabled(
+        enabled: Boolean
+    ) {
+        viewModelScope.launch {
+            repository.setBiometricEnabled(
+                enabled
+            )
+        }
+    }
 }
 
-class SecureDocumentViewModelFactory(
+class SecureVaultViewModelFactory(
     private val repository: SecureVaultRepository
 ) : ViewModelProvider.Factory {
 
@@ -150,11 +211,10 @@ class SecureDocumentViewModelFactory(
 
         if (
             modelClass.isAssignableFrom(
-                SecureDocumentViewModel::class.java
+                SecureVaultViewModel::class.java
             )
         ) {
-
-            return SecureDocumentViewModel(
+            return SecureVaultViewModel(
                 repository
             ) as T
         }

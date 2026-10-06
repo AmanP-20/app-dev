@@ -1,63 +1,177 @@
 package com.amanp20.securevault.utils
 
-import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.provider.DocumentsContract
-import com.amanp20.securevault.data.model.SecureDocument
+import android.webkit.MimeTypeMap
+import java.io.File
 
 object FileMetadataUtils {
-    private val supportedMimeTypes = setOf(
-        "application/pdf", "text/plain", "image/jpeg", "image/png", "image/webp",
-        "video/mp4", "audio/mpeg", "audio/wav"
+
+    data class FileMetadata(
+        val name: String,
+        val mimeType: String,
+        val size: Long,
+        val category: String,
+        val lastModified: Long
     )
 
-    fun readDocument(resolver: ContentResolver, uri: Uri): SecureDocument? {
-        var name = uri.lastPathSegment?.substringAfterLast('/') ?: return null
+    fun readMetadata(
+        context: Context,
+        uri: Uri
+    ): FileMetadata {
+
+        val resolver =
+            context.contentResolver
+
+        val mimeType =
+            resolver.getType(uri)
+                ?: "application/octet-stream"
+
+        var name: String? = null
         var size = 0L
-        var lastModified: Long? = null
+
         resolver.query(
             uri,
-            arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED),
+            arrayOf(
+                OpenableColumns.DISPLAY_NAME,
+                OpenableColumns.SIZE
+            ),
             null,
             null,
             null
-        )
-            ?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        .takeIf { it >= 0 }?.let { name = cursor.getString(it) ?: name }
-                    cursor.getColumnIndex(OpenableColumns.SIZE)
-                        .takeIf { it >= 0 }?.let { size = cursor.getLong(it) }
-                    cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-                        .takeIf { it >= 0 }?.let { lastModified = cursor.getLong(it) }
+        )?.use { cursor ->
+
+            if (cursor.moveToFirst()) {
+
+                val nameIndex =
+                    cursor.getColumnIndex(
+                        OpenableColumns.DISPLAY_NAME
+                    )
+
+                val sizeIndex =
+                    cursor.getColumnIndex(
+                        OpenableColumns.SIZE
+                    )
+
+                if (nameIndex >= 0) {
+                    name =
+                        cursor.getString(
+                            nameIndex
+                        )
+                }
+
+                if (sizeIndex >= 0 &&
+                    !cursor.isNull(sizeIndex)
+                ) {
+                    size =
+                        cursor.getLong(
+                            sizeIndex
+                        )
                 }
             }
-        val mimeType = resolver.getType(uri) ?: return null
-        if (!isSupported(mimeType)) return null
-        return SecureDocument(
-            name = name,
-            uri = uri.toString(),
+        }
+
+        if (name.isNullOrBlank()) {
+
+            name =
+                uri.lastPathSegment
+                    ?.substringAfterLast('/')
+                    ?.ifBlank { null }
+        }
+
+        if (name.isNullOrBlank()) {
+
+            val extension =
+                MimeTypeMap
+                    .getSingleton()
+                    .getExtensionFromMimeType(
+                        mimeType
+                    )
+
+            name =
+                if (extension.isNullOrBlank()) {
+                    "document"
+                } else {
+                    "document.$extension"
+                }
+        }
+
+        if (size <= 0L) {
+
+            runCatching {
+
+                resolver
+                    .openAssetFileDescriptor(
+                        uri,
+                        "r"
+                    )
+                    ?.use {
+                        size =
+                            it.length
+                    }
+            }
+        }
+
+        return FileMetadata(
+            name = sanitizeName(name),
             mimeType = mimeType,
-            fileSize = size,
+            size = size.coerceAtLeast(0L),
             category = categoryFor(mimeType),
-            lastModified = lastModified
+            lastModified = System.currentTimeMillis()
         )
     }
 
-    private fun isSupported(mimeType: String): Boolean =
-        mimeType in supportedMimeTypes || mimeType.startsWith("image/") ||
-            mimeType.startsWith("video/") || mimeType.startsWith("audio/") ||
-            mimeType.startsWith("text/") || mimeType.contains("word") ||
-            mimeType.contains("excel") || mimeType.contains("presentation")
+    fun categoryFor(
+        mimeType: String
+    ): String {
 
-    fun categoryFor(mimeType: String): String = when {
-        mimeType == "application/pdf" -> "PDF"
-        mimeType.startsWith("image/") -> "Image"
-        mimeType.startsWith("video/") -> "Video"
-        mimeType.startsWith("audio/") -> "Audio"
-        mimeType.startsWith("text/") || mimeType.contains("word") ||
-            mimeType.contains("excel") || mimeType.contains("presentation") -> "Document"
-        else -> "Other"
+        return when {
+
+            mimeType.startsWith(
+                "image/"
+            ) -> "Images"
+
+            mimeType.startsWith(
+                "video/"
+            ) -> "Videos"
+
+            mimeType.startsWith(
+                "audio/"
+            ) -> "Audio"
+
+            mimeType == "application/pdf" ||
+                mimeType.startsWith(
+                    "text/"
+                ) ||
+                mimeType == "application/msword" ||
+                mimeType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+                mimeType == "application/vnd.ms-excel" ||
+                mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+                mimeType == "application/vnd.ms-powerpoint" ||
+                mimeType == "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> {
+                "Documents"
+            }
+
+            else -> "Other"
+        }
+    }
+
+    private fun sanitizeName(
+        name: String
+    ): String {
+
+        return name
+            .substringAfterLast('/')
+            .substringAfterLast('\\')
+            .replace(
+                Regex("[\\\\/:*?\"<>|]"),
+                "_"
+            )
+            .trim()
+            .take(200)
+            .ifBlank {
+                "document"
+            }
     }
 }
