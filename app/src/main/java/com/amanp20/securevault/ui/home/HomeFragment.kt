@@ -1,32 +1,69 @@
 package com.amanp20.securevault.ui.home
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.snackbar.Snackbar
 import com.amanp20.securevault.R
 import com.amanp20.securevault.SecureVaultApplication
+import com.amanp20.securevault.data.repository.ImportResult
 import com.amanp20.securevault.databinding.FragmentHomeBinding
 import com.amanp20.securevault.ui.common.BaseBindingFragment
 import com.amanp20.securevault.viewmodel.HomeViewModel
+import com.amanp20.securevault.viewmodel.SecureVaultViewModel
+import com.amanp20.securevault.viewmodel.SecureVaultViewModelFactory
 import com.amanp20.securevault.viewmodel.ViewModelFactory
 
-class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
+class HomeFragment :
+    BaseBindingFragment<FragmentHomeBinding>() {
 
-    private val viewModel: HomeViewModel by viewModels {
-        ViewModelFactory(
-            (requireActivity().application as SecureVaultApplication)
-                .appContainer
-                .secureVaultRepository
-        )
-    }
+    private val applicationState: SecureVaultApplication
+        get() =
+            requireActivity()
+                .application as SecureVaultApplication
+
+    private val homeViewModel:
+        HomeViewModel by viewModels {
+            ViewModelFactory(
+                applicationState
+                    .appContainer
+                    .secureVaultRepository
+            )
+        }
+
+    private val vaultViewModel:
+        SecureVaultViewModel by viewModels {
+            SecureVaultViewModelFactory(
+                applicationState
+                    .appContainer
+                    .secureVaultRepository
+            )
+        }
+
+    private val picker =
+        registerForActivityResult(
+            ActivityResultContracts.OpenMultipleDocuments()
+        ) { uris ->
+
+            if (uris.isEmpty()) {
+                return@registerForActivityResult
+            }
+
+            uris.forEach { uri ->
+                importFile(uri)
+            }
+        }
 
     override fun inflateBinding(
         inflater: LayoutInflater,
         container: ViewGroup?
     ): FragmentHomeBinding {
+
         return FragmentHomeBinding.inflate(
             inflater,
             container,
@@ -44,22 +81,20 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
         )
 
         setupGreeting()
-
         observeVaultStats()
-
         setupNavigation()
     }
 
     private fun setupGreeting() {
 
         binding.greetingText.setText(
-            viewModel.greeting
+            homeViewModel.greeting
         )
     }
 
     private fun observeVaultStats() {
 
-        viewModel.documentCount.observe(
+        homeViewModel.documentCount.observe(
             viewLifecycleOwner
         ) { count ->
 
@@ -67,7 +102,7 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
                 count.toString()
         }
 
-        viewModel.totalStorageUsed.observe(
+        homeViewModel.totalStorageUsed.observe(
             viewLifecycleOwner
         ) { bytes ->
 
@@ -91,6 +126,73 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
                 R.id.action_homeFragment_to_settingsFragment
             )
         }
+
+        binding.addFileButton.setOnClickListener {
+
+            picker.launch(
+                arrayOf("*/*")
+            )
+        }
+    }
+
+    private fun importFile(
+        uri: Uri
+    ) {
+
+        vaultViewModel.importFile(
+            uri = uri,
+
+            onResult = { result ->
+
+                if (!isAdded) {
+                    return@importFile
+                }
+
+                when (result) {
+
+                    ImportResult.Added -> {
+
+                        showMessage(
+                            "File encrypted and added"
+                        )
+                    }
+
+                    ImportResult.Duplicate -> {
+
+                        showMessage(
+                            "A file with this name already exists"
+                        )
+                    }
+                }
+            },
+
+            onError = { error ->
+
+                if (!isAdded) {
+                    return@importFile
+                }
+
+                showMessage(
+                    error.message
+                        ?: "Unable to import file"
+                )
+            }
+        )
+    }
+
+    private fun showMessage(
+        message: String
+    ) {
+
+        if (!isAdded) {
+            return
+        }
+
+        Snackbar.make(
+            binding.root,
+            message,
+            Snackbar.LENGTH_LONG
+        ).show()
     }
 
     private fun formatStorage(
@@ -109,7 +211,9 @@ class HomeFragment : BaseBindingFragment<FragmentHomeBinding>() {
             "TB"
         )
 
-        var value = bytes.toDouble()
+        var value =
+            bytes.toDouble()
+
         var index = 0
 
         while (
